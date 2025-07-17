@@ -196,3 +196,23 @@ mic_db_logger.pyと同じ方法でテスト集計したデシベル値
 dB(A)は中音(人の音域)設定のため、  
 金属がすれる音(低音)などは実際の人間の感じられるdB(A)値より低く求められる問題がある。  
 70dB(A)に感じても50dB(A)ほどとして求められる(自前ツールやwebフリーツールで確認)
+
+# ライセンス
+パッケージ名	ライセンス  
+pyaudio	MIT  
+numpy	BSD  
+librosa	ISC  
+psycopg2	LGPL  
+grpcio	Apache-2.0  
+grpcio-tools	Apache-2.0  
+PyQt5	GPL v3  
+matplotlib	PSF  
+fastapi	MIT  
+uvicorn[standard]	BSD-3-Clause  
+sqlalchemy	MIT  
+psycopg2-binary	LGPL  
+fastapi-admin	MIT  
+jinja2	BSD-3-Clause  
+※ PyQt5はGPL v3（商用利用や配布時は注意）、psycopg2/psycopg2-binaryはLGPLです。  
+詳細や条件は各公式リポジトリ・PyPIでご確認ください。  
+クライアントアプリ(window画面用)にPyQt5を使用しているため、GPL v3ライセンスとなります。
