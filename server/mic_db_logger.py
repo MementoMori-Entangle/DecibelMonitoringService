@@ -1,27 +1,23 @@
-import pyaudio
-import numpy as np
+﻿import threading
 import time
-import threading
-import psycopg2
 from datetime import datetime
-import librosa
 
-# --- 設定 ---
+import librosa
+import numpy as np
+import psycopg2
+import pyaudio
+
+from config import (DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER,
+                    DECIBEL_LOG_TABLE)
+
+# マイク設定
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
 MIN_INTERVAL_MS = 100  # 最小100ms
-INTERVAL_MS = 500      # 計測間隔(ミリ秒)
+INTERVAL_MS = 1000      # 計測間隔(ミリ秒)
 INPUT_DEVICE_INDEX = 1  # マイクデバイス番号指定
-
-# PostgreSQL接続情報
-DB_HOST = "localhost"
-DB_PORT = 5432
-DB_NAME = "DecibelMonitor"
-DB_USER = "DMLogger"
-DB_PASS = "s#gs1Gk3Dh8sa!g3s"
-TABLE_NAME = "decibel_log"
 
 def rms_librosa(buf):
     rms = librosa.feature.rms(y=buf)
@@ -45,7 +41,7 @@ def connect_db():
 def create_table_if_not_exists(conn):
     with conn.cursor() as cur:
         cur.execute(f"""
-        CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
+        CREATE TABLE IF NOT EXISTS {DECIBEL_LOG_TABLE} (
             id SERIAL PRIMARY KEY,
             timestamp TIMESTAMP(3) NOT NULL,
             decibel_a REAL NOT NULL
@@ -56,7 +52,7 @@ def create_table_if_not_exists(conn):
 def insert_decibel(conn, dt, db_a):
     with conn.cursor() as cur:
         cur.execute(
-            f"INSERT INTO {TABLE_NAME} (timestamp, decibel_a) VALUES (%s, %s)",
+            f"INSERT INTO {DECIBEL_LOG_TABLE} (timestamp, decibel_a) VALUES (%s, %s)",
             (dt, db_a)
         )
         conn.commit()
