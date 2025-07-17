@@ -3,6 +3,10 @@
 
 ラズパイ + USBマイクでデシベルロガー
 
+# クライアントアプリについて
+server内にあるdecibel_client_app.pyは簡易確認用です。  
+実際のクライアントはFlutterで作成(Androidのみ対応)予定です。
+
 端末 Raspberry Pi 4 ModelB  
 USBマイク MI-305  
 <img width="600" height="400" alt="2018年製ラズパイ" src="https://github.com/user-attachments/assets/11e98145-9f6d-46e2-8dd5-232249493acb" />
