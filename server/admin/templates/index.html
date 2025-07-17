@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>アクセストークン管理</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>アクセストークン管理</h1>
+        <form method="post" action="/add" class="add-form">
+            <input type="text" name="token" placeholder="新規トークン" required>
+            <input type="text" name="description" placeholder="説明">
+            <button type="submit">追加</button>
+        </form>
+        <table>
+            <thead>
+                <tr><th>ID</th><th>トークン</th><th>説明</th><th>有効</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+                {% for t in tokens %}
+                <tr>
+                    <td>{{ t.id }}</td>
+                    <td>{{ t.token }}</td>
+                    <td>{{ t.description }}</td>
+                    <td>{{ '✅' if t.enabled else '❌' }}</td>
+                    <td>
+                        <form method="post" action="/toggle/{{ t.id }}" style="display:inline;"><button type="submit">切替</button></form>
+                        <form method="post" action="/delete/{{ t.id }}" style="display:inline;"><button type="submit" onclick="return confirm('削除しますか?');">削除</button></form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+﻿syntax = "proto3";
+
+package decibelmonitor;
+
+service DecibelLogger {
+  rpc GetDecibelLog (DecibelLogRequest) returns (DecibelLogResponse);
+}
+
+message DecibelLogRequest {
+  string access_token = 1;
+  string start_datetime = 2; // yyyyMMdd hh:mi:ss 形式
+  string end_datetime = 3;   // yyyyMMdd hh:mi:ss 形式
+}
+
+message DecibelData {
+  string datetime = 1; // yyyyMMdd hh:mi:ss
+  float decibel = 2;
+}
+
+message DecibelLogResponse {
+  repeated DecibelData logs = 1;
+}
