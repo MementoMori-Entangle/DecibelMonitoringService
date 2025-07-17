@@ -3,10 +3,196 @@
 
 ラズパイ + USBマイクでデシベルロガー
 
-端末 RaspberryPi4ModelB  
-USBマイク MI-305
+端末 Raspberry Pi 4 ModelB  
+USBマイク MI-305  
+<img width="600" height="400" alt="2018年製ラズパイ" src="https://github.com/user-attachments/assets/11e98145-9f6d-46e2-8dd5-232249493acb" />
 
-環境・言語  
-Python3  
-postgreSQL  
-gRPC
+Raspberry Pi OS 64bit
+
+サーバー(Raspberry Pi)  
+デシベル収集プログラム(mic_db_logger.py)  
+データベース(PostgreSQL)  
+データアクセスはgRPCサーバー経由 (mTLS対応)
+
+開発環境  
+　Python 3.13.3  
+　PostgreSQL 17.5 on x86_64-windows, compiled by msvc-19.44.35209, 64-bit  
+　gRPC grpcio 1.73.1
+
+実行環境  
+　Python 3.11.2  
+　psql (PostgreSQL) 15.13 (Debian 15.13-0+deb12u1)  
+　gRPC grpcio 1.73.1
+
+---
+# id、password、portなどの値はテスト用です。
+# 必要に応じて変更してください。
+---
+
+ラズパイOSインストール後設定  
+sudo apt update  
+sudo apt upgrade -y  
+sudo apt full-upgrade -y  
+sudo apt autoremove -y  
+
+SDカードにOS書き込む時点で設定している場合は不要  
+sudo raspi-config
+
+ファイヤーウォール設定  
+sudo apt install ufw
+
+[初期設定確認]  
+sudo nano /etc/default/ufw
+
+sudo ufw disable
+
+sudo ufw default deny  
+sudo ufw allow 80/tcp  
+sudo ufw allow 443/tcp  
+sudo ufw allow 50051/tcp # gRPC  
+sudo ufw allow from 192.168.11.0/24 to any port 22 proto tcp # SSH  
+sudo ufw allow from 192.168.11.0/24 to any port 5901 proto tcp # VNC
+
+sudo ufw enable
+
+PostgreSQLインストール  
+sudo apt update  
+sudo apt install postgresql postgresql-contrib
+
+## 今回は未対応
+検索などの日本語環境特有のソート順などが必要な場合はクラスタレベルで作り直す必要あり  
+locale -a | grep ja_JP  
+未設定の場合  
+sudo locale-gen ja_JP.UTF-8  
+追加失敗した場合は有効ロケール修正(ja行コメントアウト)  
+sudo nano /etc/locale.gen  
+sudo update-locale  
+ラズパイがイギリス製だからen_GB.UTF-8がデフォルト?
+##
+
+データベース状態確認  
+sudo su - postgres  
+psql -U postgres -c "\l"  
+psql -U postgres -c "\du"
+
+ユーザーとDB作成  
+CREATE USER "DMLogger" WITH PASSWORD 's#gs1Gk3Dh8sa!g3s';  
+CREATE DATABASE "DecibelMonitor" OWNER "DMLogger";
+
+## ja_JP.UTF-8対応クラスタ対応後なら可能  
+CREATE DATABASE "DecibelMonitor"  
+  OWNER "DMLogger"  
+  ENCODING 'UTF8'  
+  LC_COLLATE='ja_JP.utf8'  
+  LC_CTYPE='ja_JP.utf8'  
+  TEMPLATE template2;  
+##
+
+権限追加  
+GRANT CONNECT ON DATABASE "DecibelMonitor" TO "DMLogger";  
+GRANT USAGE, CREATE ON SCHEMA public TO "DMLogger";  
+ALTER DEFAULT PRIVILEGES IN SCHEMA public  
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "DMLogger";
+
+アプリで使用するユーザーでアクセストークンテーブル作成  
+psql -h localhost -d "DecibelMonitor" -U "DMLogger"
+
+VNCでデスクトップ表示が正常にできないため、  
+webアプリでアクセストークンを設定できないため、  
+直接DBテーブル作成してデータ設定
+
+CREATE TABLE IF NOT EXISTS access_tokens (  
+ id SERIAL PRIMARY KEY,  
+ token VARCHAR(128) UNIQUE NOT NULL,  
+ description VARCHAR(256),  
+ enabled BOOLEAN DEFAULT TRUE  
+);
+
+INSERT INTO access_tokens (token, description, enabled)  
+VALUES('12345', 'テスト', true);
+
+権限確認  
+SELECT tablename, tableowner  
+FROM pg_tables  
+WHERE schemaname = 'public';
+
+SELECT grantee, privilege_type  
+FROM information_schema.role_table_grants  
+WHERE grantee = 'DMLogger';
+
+
+gRPC自動生成部分  
+cd C:\workspace\DecibelMonitoringService\proto  
+python -m grpc_tools.protoc -I ../proto --python_out=../server --grpc_python_out=../server ../proto/decibel_logger.proto
+
+# decibel_logger_server.py起動前に環境変数設定必須
+gRPC認証設定  
+・認証なし  
+set GRPC_SERVER_AUTH=none  
+export GRPC_SERVER_AUTH=none  
+・サーバー認証のみ  
+set GRPC_SERVER_AUTH=tls  
+export GRPC_SERVER_AUTH=tls   
+・mTLS  
+set GRPC_SERVER_AUTH=mtls  
+export GRPC_SERVER_AUTH=tls
+
+アクセスログipv4登録設定 (ipv6で登録する場合はfalse)  
+set GRPC_LOG_IPV4_ONLY=true  
+export GRPC_LOG_IPV4_ONLY=true
+
+アクセストークンはpsqlで直接操作するかWebアプリ(ローカル限定)で登録  
+cd C:\workspace\DecibelMonitoringService\server  
+uvicorn admin.main:app --reload --host 127.0.0.1 --port 8000
+
+# pipではインストールできないので事前にapt対応
+sudo apt update  
+sudo apt install python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtwebengine  
+sudo apt install portaudio19-dev  
+sudo apt install libpq-dev
+
+1. venvを作成  
+python3 -m venv dms
+
+2. 仮想環境を有効化  
+source dms/bin/activate
+
+3. 仮想環境でpip install (PyQt5やPyAudio、psycopg2の一部はaptでインストール)  
+基本パッケージ  
+pip install pyaudio numpy librosa psycopg2 grpcio grpcio-tools matplotlib  
+管理画面用パッケージ  
+pip install fastapi uvicorn[standard] sqlalchemy psycopg2-binary fastapi-admin jinja2
+
+4. 仮想環境を抜ける  
+deactivate
+
+## Windows環境では直インストール可能(PEP668警告がないため)
+基本パッケージ  
+pip install pyaudio numpy librosa psycopg2 grpcio grpcio-tools PyQt5 matplotlib  
+
+管理画面用パッケージ  
+pip install fastapi uvicorn[standard] sqlalchemy psycopg2-binary fastapi-admin jinja2
+
+アプリソース取得  
+sudo apt update  
+sudo apt install git
+
+クローンしてソース取得  
+git clone https://github.com/MementoMori-Entangle/DecibelMonitoringService.git
+
+デシベルデータ登録常駐アプリ  
+[Windows]  
+cd C:\workspace\DecibelMonitoringService\server  
+python mic_db_logger.py
+
+[Linux]  
+cd /home/entangle/workspace/DecibelMonitoringService/server  
+python mic_db_logger.py
+
+mic_db_logger.pyと同じ方法でテスト集計したデシベル値  
+<img width="320" height="240" alt="マイクテスト" src="https://github.com/user-attachments/assets/916a0ff6-e1c4-406c-8163-4cd373950223" />
+
+# 低音・中音・高音の問題
+dB(A)は中音(人の音域)設定のため、  
+金属がすれる音(低音)などは実際の人間の感じられるdB(A)値より低く求められる問題がある。  
+70dB(A)に感じても50dB(A)ほどとして求められる(自前ツールやwebフリーツールで確認)
