@@ -170,7 +170,8 @@ sudo apt install portaudio19-dev
 sudo apt install libpq-dev
 
 1. venvを作成  
-python3 -m venv dms
+-- python3 -m venv dms # PyQt5の問題が解決できないため--system-site-packages使用  
+python3 -m venv dms --system-site-packages
 
 2. 仮想環境を有効化  
 source dms/bin/activate
