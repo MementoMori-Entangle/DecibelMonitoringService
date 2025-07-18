@@ -75,6 +75,18 @@ sudo update-locale
 (Raspberry Pi Imagerで日本語設定していたが、適用できていない状態でした)
 ##
 
+# クラスタ再構築方法
+ラズパイ初期設定(ロケールGB)でPostgreSQLをインストールした後に  
+やっぱりOS環境は日本語がいいからJAにした場合、  
+PostgreSQLのクラスタがGBのままなので、サービスの起動に失敗します。  
+以下の方法でクラスタを再作成して対応が必要です。
+
+-- データは完全に消えるので注意  
+sudo pg_dropcluster 15 main --stop  
+sudo pg_createcluster 15 main --locale=ja_JP.UTF-8 --start  
+-- サービス起動  
+sudo systemctl restart postgresql
+
 データベース状態確認  
 sudo su - postgres  
 psql -U postgres -c "\l"  
@@ -90,7 +102,7 @@ CREATE DATABASE "DecibelMonitor"
   ENCODING 'UTF8'  
   LC_COLLATE='ja_JP.utf8'  
   LC_CTYPE='ja_JP.utf8'  
-  TEMPLATE template2;  
+  TEMPLATE template0;  
 ##
 
 権限追加  
