@@ -10,6 +10,16 @@ from PyQt5.QtGui import QFont
 import decibel_logger_pb2
 import decibel_logger_pb2_grpc
 
+# 日本語フォントリスト取得関数
+def get_jp_fonts():
+    if sys.platform.startswith('win'):
+        return ['Meiryo', 'Yu Gothic', 'MS Gothic']
+    else:
+        return [
+            'Noto Sans CJK JP', 'Noto Serif CJK JP', 'Noto Sans Mono CJK JP',
+            'IPAPGothic', 'VL PGothic', 'TakaoPGothic', 'Sazanami Gothic', 'Ume Gothic'
+        ]
+
 class DecibelClientApp(QtWidgets.QWidget):
     def on_hscroll(self, value):
         # 横スクロールでxlimを調整（y軸は常に全体表示）
@@ -185,13 +195,7 @@ class DecibelClientApp(QtWidgets.QWidget):
 if __name__ == '__main__':
     # PyQtアプリ全体のフォントも日本語フォントを優先的に設定
     from PyQt5.QtGui import QFontDatabase
-    if sys.platform.startswith('win'):
-        jp_fonts = ['Meiryo', 'Yu Gothic', 'MS Gothic']
-    else:
-        jp_fonts = [
-            'Noto Sans CJK JP', 'Noto Serif CJK JP', 'Noto Sans Mono CJK JP',
-            'IPAPGothic', 'VL PGothic', 'TakaoPGothic', 'Sazanami Gothic', 'Ume Gothic'
-        ]
+    jp_fonts = get_jp_fonts()
     app = QtWidgets.QApplication(sys.argv)
     font_db = QFontDatabase()
     for jp_font in jp_fonts:
