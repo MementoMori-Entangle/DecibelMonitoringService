@@ -1,4 +1,4 @@
-# DecibelMonitoringService
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/64a1039e-a703-4ff3-85c4-00f5cba62fa4" /># DecibelMonitoringService
 デシベルモニタリングサービス
 
 ラズパイ + USBマイクでデシベルロガー
@@ -11,7 +11,8 @@ server内にあるdecibel_client_app.pyは簡易確認用です。
 USBマイク MI-305  
 <img width="600" height="400" alt="2018年製ラズパイ" src="https://github.com/user-attachments/assets/11e98145-9f6d-46e2-8dd5-232249493acb" />
 
-Raspberry Pi OS 64bit
+Raspberry Pi OS 64bit  
+(Raspberry Pi Imager使用)
 
 サーバー(Raspberry Pi)  
 デシベル収集プログラム(mic_db_logger.py)  
@@ -55,7 +56,7 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp  
 sudo ufw allow 50051/tcp # gRPC  
 sudo ufw allow from 192.168.11.0/24 to any port 22 proto tcp # SSH  
-sudo ufw allow from 192.168.11.0/24 to any port 5901 proto tcp # VNC
+sudo ufw allow from 192.168.11.0/24 to any port 5900 proto tcp # VNC
 
 sudo ufw enable
 
@@ -71,7 +72,8 @@ sudo locale-gen ja_JP.UTF-8
 追加失敗した場合は有効ロケール修正(ja行コメントアウト)  
 sudo nano /etc/locale.gen  
 sudo update-locale  
-ラズパイがイギリス製だからen_GB.UTF-8がデフォルト?
+ラズパイがイギリス製だからen_GB.UTF-8がデフォルト?  
+(Raspberry Pi Imagerで日本語設定していたが、適用できていない状態でした)
 ##
 
 データベース状態確認  
@@ -101,7 +103,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "DMLogger";
 アプリで使用するユーザーでアクセストークンテーブル作成  
 psql -h localhost -d "DecibelMonitor" -U "DMLogger"
 
-VNCでデスクトップ表示が正常にできないため、  
+VNCでデスクトップ表示が正常にできない → 一度直繋ぎで設定したらできました。  
 webアプリでアクセストークンを設定できないため、  
 直接DBテーブル作成してデータ設定
 
@@ -128,6 +130,7 @@ WHERE grantee = 'DMLogger';
 gRPC自動生成部分  
 cd C:\workspace\DecibelMonitoringService\proto  
 python -m grpc_tools.protoc -I ../proto --python_out=../server --grpc_python_out=../server ../proto/decibel_logger.proto
+
 
 # decibel_logger_server.py起動前に環境変数設定必須
 gRPC認証設定  
