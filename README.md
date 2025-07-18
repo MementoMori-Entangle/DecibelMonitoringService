@@ -1,4 +1,3 @@
-<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/64a1039e-a703-4ff3-85c4-00f5cba62fa4" /># DecibelMonitoringService
 デシベルモニタリングサービス
 
 ラズパイ + USBマイクでデシベルロガー
