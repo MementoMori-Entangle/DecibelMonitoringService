@@ -3,9 +3,9 @@ import sys
 
 import grpc
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtGui import QFont
 
 import decibel_logger_pb2
 import decibel_logger_pb2_grpc
@@ -28,20 +28,25 @@ class DecibelClientApp(QtWidgets.QWidget):
                 if len(ydata) > 0:
                     ax.set_ylim(min(ydata) - 2, max(ydata) + 2)
                 self.canvas.draw_idle()
+
     def __init__(self):
         import matplotlib.font_manager as fm
         import matplotlib.pyplot as plt
 
-        # 日本語フォント設定（Windows標準のMS Gothic, Meiryo, Yu Gothicを優先）
-        font_path = fm.findSystemFonts(fontpaths=None, fontext='ttf')
-        jp_font = None
-        for path in font_path:
-            lower = path.lower()
-            if 'msgothic' in lower or 'meiryo' in lower or 'yugoth' in lower:
-                jp_font = path
+        # Linuxで日本語フォントを優先的に設定（Noto Sans CJK JP, IPAexGothic, VL PGothic など）
+        jp_fonts = [
+            'Noto Sans CJK JP', 'IPAPGothic', 'VL PGothic',
+            'TakaoPGothic', 'Sazanami Gothic', 'Ume Gothic'
+        ]
+        found_font = None
+        # システムにインストールされているフォント一覧を取得
+        font_list = [fm.FontProperties(fname=path).get_name() for path in fm.findSystemFonts(fontpaths=None, fontext='ttf')]
+        for jp_font in jp_fonts:
+            if jp_font in font_list:
+                found_font = jp_font
                 break
-        if jp_font:
-            plt.rcParams['font.family'] = fm.FontProperties(fname=jp_font).get_name()
+        if found_font:
+            plt.rcParams['font.family'] = found_font
         else:
             plt.rcParams['font.family'] = 'sans-serif'
         super().__init__()
@@ -83,8 +88,7 @@ class DecibelClientApp(QtWidgets.QWidget):
         self.scroll_area.setWidgetResizable(True)
         layout.addWidget(self.scroll_area)
         # matplotlibのナビゲーションツールバー追加
-        from matplotlib.backends.backend_qt5 import \
-            NavigationToolbar2QT as NavigationToolbar
+        from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
         self.toolbar = NavigationToolbar(self.canvas, self)
         layout.addWidget(self.toolbar)
         # 横スクロールバーの追加
@@ -174,7 +178,18 @@ class DecibelClientApp(QtWidgets.QWidget):
         self.canvas.draw()
 
 if __name__ == '__main__':
+    # PyQtアプリ全体のフォントも日本語フォントを優先的に設定
+    from PyQt5.QtGui import QFontDatabase
+    jp_fonts = [
+        'Noto Sans CJK JP', 'IPAPGothic', 'VL PGothic',
+        'TakaoPGothic', 'Sazanami Gothic', 'Ume Gothic'
+    ]
     app = QtWidgets.QApplication(sys.argv)
+    font_db = QFontDatabase()
+    for jp_font in jp_fonts:
+        if jp_font in font_db.families():
+            app.setFont(QFont(jp_font))
+            break
     win = DecibelClientApp()
     win.show()
     sys.exit(app.exec_())
