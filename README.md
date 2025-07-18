@@ -210,6 +210,11 @@ python mic_db_logger.py
 mic_db_logger.pyと同じ方法でテスト集計したデシベル値  
 <img width="320" height="240" alt="マイクテスト" src="https://github.com/user-attachments/assets/916a0ff6-e1c4-406c-8163-4cd373950223" />
 
+# ALSAやJACK関連のエラー・警告  
+LinuxでPyAudioやPortAudioが内部でデバイス探索を行う際によく出るものです。  
+Windowsでは表示されず、Linux固有の現象  
+気になる人は環境変数かimport冒頭で抑制してください。
+
 # 低音・中音・高音の問題
 dB(A)は中音(人の音域)設定のため、  
 金属がすれる音(低音)などは実際の人間の感じられるdB(A)値より低く求められる問題がある。  
