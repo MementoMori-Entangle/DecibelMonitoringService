@@ -1,4 +1,4 @@
-# デシベルモニタリングサービス
+# DecibelMonitoringService
 
 ラズパイ + USBマイクでデシベルロガー
 
