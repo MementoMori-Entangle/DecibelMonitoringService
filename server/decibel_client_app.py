@@ -33,22 +33,27 @@ class DecibelClientApp(QtWidgets.QWidget):
         import matplotlib.font_manager as fm
         import matplotlib.pyplot as plt
 
-        # Linuxで日本語フォントを優先的に設定（Noto Sans CJK JP, IPAexGothic, VL PGothic など）
-        jp_fonts = [
-            'Noto Sans CJK JP', 'IPAPGothic', 'VL PGothic',
-            'TakaoPGothic', 'Sazanami Gothic', 'Ume Gothic'
-        ]
+        if sys.platform.startswith('win'):
+            # Windowsの場合
+            jp_fonts = ['Meiryo', 'Yu Gothic', 'MS Gothic']
+        else:
+            # LinuxやMacの場合
+            jp_fonts = [
+                'Noto Sans CJK JP', 'Noto Serif CJK JP', 'Noto Sans Mono CJK JP',
+                'IPAPGothic', 'VL PGothic', 'TakaoPGothic', 'Sazanami Gothic', 'Ume Gothic'
+            ]
         found_font = None
-        # システムにインストールされているフォント一覧を取得
-        font_list = [fm.FontProperties(fname=path).get_name() for path in fm.findSystemFonts(fontpaths=None, fontext='ttf')]
+        font_list = set(f.name for f in fm.fontManager.ttflist)
         for jp_font in jp_fonts:
             if jp_font in font_list:
                 found_font = jp_font
                 break
         if found_font:
             plt.rcParams['font.family'] = found_font
+            print("Using matplotlib font:", found_font)
         else:
             plt.rcParams['font.family'] = 'sans-serif'
+            print("No suitable Japanese font found for matplotlib. Using sans-serif.")
         super().__init__()
         self.setWindowTitle('Decibel Logger gRPC Client')
         self.resize(1500, 1000)
@@ -180,16 +185,22 @@ class DecibelClientApp(QtWidgets.QWidget):
 if __name__ == '__main__':
     # PyQtアプリ全体のフォントも日本語フォントを優先的に設定
     from PyQt5.QtGui import QFontDatabase
-    jp_fonts = [
-        'Noto Sans CJK JP', 'IPAPGothic', 'VL PGothic',
-        'TakaoPGothic', 'Sazanami Gothic', 'Ume Gothic'
-    ]
+    if sys.platform.startswith('win'):
+        jp_fonts = ['Meiryo', 'Yu Gothic', 'MS Gothic']
+    else:
+        jp_fonts = [
+            'Noto Sans CJK JP', 'Noto Serif CJK JP', 'Noto Sans Mono CJK JP',
+            'IPAPGothic', 'VL PGothic', 'TakaoPGothic', 'Sazanami Gothic', 'Ume Gothic'
+        ]
     app = QtWidgets.QApplication(sys.argv)
     font_db = QFontDatabase()
     for jp_font in jp_fonts:
         if jp_font in font_db.families():
             app.setFont(QFont(jp_font))
+            print("Using PyQt font:", jp_font)
             break
+    else:
+        print("No suitable Japanese font found for PyQt. Using default font.")
     win = DecibelClientApp()
     win.show()
     sys.exit(app.exec_())
