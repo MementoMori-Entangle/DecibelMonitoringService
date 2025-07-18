@@ -43,24 +43,6 @@ def is_valid_token(token):
     except Exception as e:
         print(f"[TOKEN CHECK ERROR] {e}", flush=True)
         return False
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS access_tokens (
-                    id SERIAL PRIMARY KEY,
-                    token VARCHAR(128) UNIQUE NOT NULL,
-                    description VARCHAR(256),
-                    enabled BOOLEAN DEFAULT TRUE
-                )
-            """)
-            cur.execute(
-                "SELECT enabled FROM access_tokens WHERE token = %s", (token,)
-            )
-            row = cur.fetchone()
-        conn.close()
-        return bool(row) and row[0] is True
-    except Exception as e:
-        print(f"[TOKEN CHECK ERROR] {e}", flush=True)
-        return False
 
 
 def log_access(ip_addr, access_token, success, reason):
