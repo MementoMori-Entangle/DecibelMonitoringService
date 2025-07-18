@@ -178,6 +178,17 @@ sudo apt install git
 クローンしてソース取得  
 git clone https://github.com/MementoMori-Entangle/DecibelMonitoringService.git
 
+# 証明書
+リポジトリには/server/配下の  
+certs/  
+ca.crt  
+client.crt  
+client.key  
+server.crt  
+server.key  
+は登録されていません。  
+環境に合わせて作成してください。
+
 デシベルデータ登録常駐アプリ  
 [Windows]  
 cd C:\workspace\DecibelMonitoringService\server  
@@ -204,7 +215,7 @@ dB(A)は中音(人の音域)設定のため、
 cd C:\workspace\DecibelMonitoringService\server  
 uvicorn admin.main:app --reload --host 127.0.0.1 --port 8000
 
-# decibel_logger_server.py起動前に環境変数設定必須
+# decibel_logger_server.py起動前に環境変数設定
 gRPC認証設定  
 ・認証なし  
 set GRPC_SERVER_AUTH=none  
@@ -219,6 +230,25 @@ export GRPC_SERVER_AUTH=tls
 アクセスログipv4登録設定 (ipv6で登録する場合はfalse)  
 set GRPC_LOG_IPV4_ONLY=true  
 export GRPC_LOG_IPV4_ONLY=true
+
+# Linux環境でdecibel_client_app.pyを使用する場合
+Linux環境日本語フォントインストール(必要な場合)  
+sudo apt update  
+sudo apt install fonts-noto-cjk
+
+# サービス登録(必要な場合)
+対象  
+・mic_db_logger.py(デシベルデータ集計 常駐)  
+・decibel_logger_server.py(デシベルデータ配信gRPCサービス 常駐)  
+注意  
+decibel_logger_serverはEnvironmentにGRPC_SERVER_AUTHを  
+指定しない場合は認証なしとなります。  
+ExecStartのpythonは仮想環境で稼働することを考慮してください。  
+上記2サービスはPostgreSQLサービスが稼働していることが前提条件です。  
+例) PostgreSQLサービス名を確認して指定してください。  
+After=postgresql@15-main.service  
+Requires=postgresql@15-main.service  
+で制御してください。
 
 # ライセンス
 パッケージ名	ライセンス  
