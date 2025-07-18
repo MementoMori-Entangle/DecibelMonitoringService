@@ -142,27 +142,6 @@ gRPC自動生成部分
 cd C:\workspace\DecibelMonitoringService\proto  
 python -m grpc_tools.protoc -I ../proto --python_out=../server --grpc_python_out=../server ../proto/decibel_logger.proto
 
-
-# decibel_logger_server.py起動前に環境変数設定必須
-gRPC認証設定  
-・認証なし  
-set GRPC_SERVER_AUTH=none  
-export GRPC_SERVER_AUTH=none  
-・サーバー認証のみ  
-set GRPC_SERVER_AUTH=tls  
-export GRPC_SERVER_AUTH=tls   
-・mTLS  
-set GRPC_SERVER_AUTH=mtls  
-export GRPC_SERVER_AUTH=tls
-
-アクセスログipv4登録設定 (ipv6で登録する場合はfalse)  
-set GRPC_LOG_IPV4_ONLY=true  
-export GRPC_LOG_IPV4_ONLY=true
-
-アクセストークンはpsqlで直接操作するかWebアプリ(ローカル限定)で登録  
-cd C:\workspace\DecibelMonitoringService\server  
-uvicorn admin.main:app --reload --host 127.0.0.1 --port 8000
-
 # pipではインストールできないので事前にapt対応
 sudo apt update  
 sudo apt install python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtwebengine  
@@ -220,6 +199,26 @@ Windowsでは表示されず、Linux固有の現象
 dB(A)は中音(人の音域)設定のため、  
 金属がすれる音(低音)などは実際の人間の感じられるdB(A)値より低く求められる問題がある。  
 70dB(A)に感じても50dB(A)ほどとして求められる(自前ツールやwebフリーツールで確認)
+
+アクセストークンはpsqlで直接操作するかWebアプリ(ローカル限定)で登録  
+cd C:\workspace\DecibelMonitoringService\server  
+uvicorn admin.main:app --reload --host 127.0.0.1 --port 8000
+
+# decibel_logger_server.py起動前に環境変数設定必須
+gRPC認証設定  
+・認証なし  
+set GRPC_SERVER_AUTH=none  
+export GRPC_SERVER_AUTH=none  
+・サーバー認証のみ  
+set GRPC_SERVER_AUTH=tls  
+export GRPC_SERVER_AUTH=tls   
+・mTLS  
+set GRPC_SERVER_AUTH=mtls  
+export GRPC_SERVER_AUTH=tls
+
+アクセスログipv4登録設定 (ipv6で登録する場合はfalse)  
+set GRPC_LOG_IPV4_ONLY=true  
+export GRPC_LOG_IPV4_ONLY=true
 
 # ライセンス
 パッケージ名	ライセンス  
