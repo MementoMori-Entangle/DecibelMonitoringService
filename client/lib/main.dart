@@ -1,4 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:local_auth/local_auth.dart';
+
+import 'chart_page.dart';
+import 'config.dart';
+import 'generated/decibel_logger.pbgrpc.dart';
+import 'grpc_client_io.dart';
+import 'settings_page.dart';
+import 'settings_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,116 +19,359 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: AppConfig.title,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const AuthScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _AuthScreenState extends State<AuthScreen> {
+  final LocalAuthentication auth = LocalAuthentication();
+  String _error = '';
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  Future<void> _authenticate() async {
+    bool authenticated = false;
+    try {
+      authenticated = await auth.authenticate(
+        localizedReason: 'Please authenticate to access decibel data',
+        options: const AuthenticationOptions(
+          biometricOnly: false,
+          stickyAuth: false,
+        ),
+      );
+    } catch (e) {
+      String message;
+      if (e.toString().contains('NotAvailable')) {
+        message = '認証エラー: デバイスに認証情報（生体認証やパスコード）が設定されていません。';
+      } else {
+        message = '認証エラー';
+      }
+      setState(() {
+        _error = message;
+      });
+      return;
+    }
+    if (authenticated && mounted) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const TopScreen()));
+    } else if (!authenticated) {
+      setState(() {
+        _error = '認証に失敗しました。';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
+      appBar: AppBar(title: const Text('Login')),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+          children: [
+            ElevatedButton(
+              onPressed: _authenticate,
+              child: const Text('端末認証ログイン'),
             ),
+            if (_error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(_error, style: const TextStyle(color: Colors.red)),
+              ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class TopScreen extends StatefulWidget {
+  const TopScreen({super.key});
+
+  @override
+  State<TopScreen> createState() => _TopScreenState();
+}
+
+class _TopScreenState extends State<TopScreen> {
+  DateTime? _startDate;
+  DateTime? _endDate;
+  List<DecibelData> _decibelList = [];
+  ConnectionConfig? _selectedConfig;
+
+  // gRPCクライアント
+  late final GrpcClient _grpcClient;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _grpcClient = createGrpcClient();
+    _loadSelectedConfig();
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, now.month, now.day);
+    _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+  }
+
+  Future<void> _loadSelectedConfig() async {
+    final service = SettingsService();
+    final configs = await service.getConfigs();
+    final idx = await service.getSelectedConfigIndex();
+    if (mounted) {
+      setState(() {
+        _selectedConfig = configs[idx.clamp(0, configs.length - 1)];
+      });
+    }
+  }
+
+  Future<void> _fetchDecibelLogs() async {
+    if (_startDate == null || _endDate == null || _selectedConfig == null) {
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final logs = await _grpcClient.fetchDecibelLogs(
+        host: _selectedConfig!.host,
+        port: _selectedConfig!.port,
+        accessToken: _selectedConfig!.accessToken,
+        startDatetime: DateFormat(AppConfig.dateTimeFormat).format(_startDate!),
+        endDatetime: DateFormat(AppConfig.dateTimeFormat).format(_endDate!),
+        timeout: Duration(milliseconds: _selectedConfig!.timeoutMillis),
+      );
+      setState(() {
+        _decibelList = logs;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(AppConfig.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: '設定',
+            onPressed: () async {
+              await Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
+              // 設定画面から戻ったら再取得
+              await _loadSelectedConfig();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'グラフ表示',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChartPage(decibelList: _decibelList),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
+            tooltip: 'アプリを終了',
+            onPressed: () async {
+              if (Platform.isAndroid) {
+                const channel = MethodChannel('mtls_grpc');
+                await channel.invokeMethod('moveTaskToBack');
+              } else if (Platform.isIOS) {
+                SystemNavigator.pop();
+              }
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: _startDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+                      if (!mounted) return;
+                      if (pickedDate != null) {
+                        final pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(
+                            _startDate ?? DateTime.now(),
+                          ),
+                        );
+                        if (!mounted) return;
+                        if (pickedTime != null) {
+                          setState(
+                            () =>
+                                _startDate = DateTime(
+                                  pickedDate.year,
+                                  pickedDate.month,
+                                  pickedDate.day,
+                                  pickedTime.hour,
+                                  pickedTime.minute,
+                                ),
+                          );
+                        } else {
+                          setState(
+                            () =>
+                                _startDate = DateTime(
+                                  pickedDate.year,
+                                  pickedDate.month,
+                                  pickedDate.day,
+                                ),
+                          );
+                        }
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(labelText: '開始日'),
+                      child: Text(
+                        _startDate == null
+                            ? ''
+                            : DateFormat(
+                              AppConfig.inputCalendarFormat,
+                            ).format(_startDate!),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: _endDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+                      if (!mounted) return;
+                      if (pickedDate != null) {
+                        final pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(
+                            _endDate ?? DateTime.now(),
+                          ),
+                        );
+                        if (!mounted) return;
+                        if (pickedTime != null) {
+                          setState(
+                            () =>
+                                _endDate = DateTime(
+                                  pickedDate.year,
+                                  pickedDate.month,
+                                  pickedDate.day,
+                                  pickedTime.hour,
+                                  pickedTime.minute,
+                                ),
+                          );
+                        } else {
+                          setState(
+                            () =>
+                                _endDate = DateTime(
+                                  pickedDate.year,
+                                  pickedDate.month,
+                                  pickedDate.day,
+                                ),
+                          );
+                        }
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(labelText: '終了日'),
+                      child: Text(
+                        _endDate == null
+                            ? ''
+                            : DateFormat(
+                              AppConfig.inputCalendarFormat,
+                            ).format(_endDate!),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed:
+                      (_startDate != null && _endDate != null && !_loading)
+                          ? _fetchDecibelLogs
+                          : null,
+                  child:
+                      _loading
+                          ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Text('表示'),
+                ),
+              ],
+            ),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _decibelList.length,
+              itemBuilder: (context, idx) {
+                final d = _decibelList[idx];
+                String formattedDate;
+                try {
+                  final dateTime = DateFormat(
+                    AppConfig.dateTimeFormat,
+                  ).parse(d.datetime);
+                  formattedDate = DateFormat(
+                    AppConfig.dateTimeFormat,
+                  ).format(dateTime);
+                } catch (e) {
+                  formattedDate = d.datetime;
+                }
+                return ListTile(
+                  title: Text(formattedDate),
+                  subtitle: Text('${d.decibel.toStringAsFixed(2)} dB'),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

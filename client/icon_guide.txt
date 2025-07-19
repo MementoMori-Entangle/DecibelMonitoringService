@@ -1,0 +1,24 @@
+# アイコン画像の自動生成手順
+
+1. 画像ファイルを `assets/icon/app_icon.png` に配置済みであることを確認してください。
+2. 下記コマンドをプロジェクトルート（pubspec.yamlがあるディレクトリ）で実行してください：
+
+```
+flutter pub get
+flutter pub run flutter_launcher_icons:main
+```
+
+3. 実行後、`android/app/src/main/res/mipmap-*` フォルダ内のアイコン画像が自動で置き換わります。
+
+4. その後、アプリを再ビルド・再インストールしてください。
+
+---
+
+もしアイコンが変わらない場合：
+- エミュレータや実機のキャッシュをクリアする
+- 一度アプリをアンインストールしてから再インストールする
+- コマンド実行時にエラーが出ていないか確認する
+
+---
+
+参考: https://pub.dev/packages/flutter_launcher_icons
