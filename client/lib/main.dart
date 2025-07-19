@@ -133,7 +133,11 @@ class _TopScreenState extends State<TopScreen> {
     final idx = await service.getSelectedConfigIndex();
     if (mounted) {
       setState(() {
-        _selectedConfig = configs[idx.clamp(0, configs.length - 1)];
+        if (configs.isNotEmpty) {
+          _selectedConfig = configs[idx.clamp(0, configs.length - 1)];
+        } else {
+          _selectedConfig = null; // Handle empty configs case
+        }
       });
     }
   }
