@@ -73,24 +73,36 @@ class SettingsService {
   Future<String> getHost() async {
     final configs = await getConfigs();
     final idx = await getSelectedConfigIndex();
+    if (idx < 0 || idx >= configs.length) {
+      return AppConfig.defaultHost;
+    }
     return configs[idx].host;
   }
 
   Future<int> getPort() async {
     final configs = await getConfigs();
     final idx = await getSelectedConfigIndex();
+    if (idx < 0 || idx >= configs.length) {
+      return AppConfig.defaultPort;
+    }
     return configs[idx].port;
   }
 
   Future<String> getAccessToken() async {
     final configs = await getConfigs();
     final idx = await getSelectedConfigIndex();
+    if (idx < 0 || idx >= configs.length) {
+      return AppConfig.defaultAccessToken;
+    }
     return configs[idx].accessToken;
   }
 
   Future<int?> getTimeoutMillis() async {
     final configs = await getConfigs();
     final idx = await getSelectedConfigIndex();
+    if (idx < 0 || idx >= configs.length) {
+      return 10000; // Default timeout
+    }
     return configs[idx].timeoutMillis;
   }
 }
