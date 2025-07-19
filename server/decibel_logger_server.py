@@ -153,7 +153,7 @@ class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
         # 日時パース
         start_dt = None
         end_dt = None
-        dt_format = "%Y%m%d %H:%M:%S"
+        dt_format = "%Y/%m/%d %H:%M:%S"
         try:
             if request.start_datetime:
                 start_dt = datetime.strptime(request.start_datetime, dt_format)
@@ -169,7 +169,7 @@ class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
         logs = fetch_decibel_logs(start_dt, end_dt)
         response = decibel_logger_pb2.DecibelLogResponse()
         for row in logs:
-            dt_str = row[0].strftime("%Y%m%d %H:%M:%S")
+            dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
             response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1]))
         return response
 
