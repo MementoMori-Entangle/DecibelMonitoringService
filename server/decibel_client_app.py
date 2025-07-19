@@ -79,8 +79,8 @@ class DecibelClientApp(QtWidgets.QWidget):
         self.host_edit = QtWidgets.QLineEdit('localhost')
         self.port_edit = QtWidgets.QLineEdit('50051')
         self.token_edit = QtWidgets.QLineEdit('12345')
-        self.start_edit = QtWidgets.QLineEdit('20250701 00:00:00')
-        self.end_edit = QtWidgets.QLineEdit('20250715 00:00:00')
+        self.start_edit = QtWidgets.QLineEdit('2025/07/01 00:00:00')
+        self.end_edit = QtWidgets.QLineEdit('2025/12/31 23:59:59')
         form_layout.addRow('サーバー:', self.host_edit)
         form_layout.addRow('ポート番号:', self.port_edit)
         form_layout.addRow('アクセストークン:', self.token_edit)
@@ -166,7 +166,7 @@ class DecibelClientApp(QtWidgets.QWidget):
             return
         self.figure.clear()
         ax = self.figure.add_subplot(111)
-        times = [datetime.datetime.strptime(dt, '%Y%m%d %H:%M:%S') for dt, _ in self.decibel_data]
+        times = [datetime.datetime.strptime(dt, '%Y/%m/%d %H:%M:%S') for dt, _ in self.decibel_data]
         decibels = [db for _, db in self.decibel_data]
         max_points = 1000
         if len(times) > max_points:
