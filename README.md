@@ -4,7 +4,7 @@
 
 # クライアントアプリについて
 server内にあるdecibel_client_app.pyは簡易確認用です。  
-実際のクライアントはFlutterで作成(Androidのみ対応)予定です。
+実際のクライアントはclient内のFlutter(Android)アプリです。
 
 端末 Raspberry Pi 4 ModelB  
 USBマイク MI-305  
