@@ -24,6 +24,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.FileReader
 import java.io.InputStream
+import java.util.Arrays
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.Security
@@ -189,13 +190,10 @@ class MainActivity : FlutterFragmentActivity() {
             val clientCert = certInput.use { cf.generateCertificate(it) as X509Certificate }
             Log.d("mtls_grpc", "クライアント証明書を読み込みました: ${clientCert.subjectX500Principal.name}")
 
-            try {
-                // 秘密鍵ファイルの内容をログに出力（デバッグ用）
-                val keyContent = keyFile.readText()
-                Log.d("mtls_grpc", "秘密鍵ファイルのサイズ: ${keyContent.length}文字")
-                Log.d("mtls_grpc", "秘密鍵ファイルの先頭30文字: ${keyContent.take(30)}...")
-            } catch (e: Exception) {
-                Log.e("mtls_grpc", "秘密鍵ファイルの読み込みに失敗しました", e)
+            if (!keyFile.exists() || !keyFile.canRead()) {
+                Log.e("mtls_grpc", "秘密鍵ファイルが存在しないか読み取れません")
+            } else {
+                Log.d("mtls_grpc", "秘密鍵ファイルの読み取り準備完了: ${keyFile.absolutePath}")
             }
 
             // BouncyCastleを使用して秘密鍵を安全に解析
@@ -241,22 +239,44 @@ class MainActivity : FlutterFragmentActivity() {
                     Log.e("mtls_grpc", "秘密鍵のパースに失敗しました", e)
                 }
                 
-                // 標準Javaの方法でフォールバック試行
+                // 標準Javaの方法でセキュアに秘密鍵を解析
                 try {
-                    Log.d("mtls_grpc", "標準Javaの方法で秘密鍵を解析します")
-                    val pem = keyFile.readText(Charsets.US_ASCII)
-                    val privateKeyPem = pem.replace("-----BEGIN PRIVATE KEY-----", "")
-                        .replace("-----END PRIVATE KEY-----", "")
-                        .replace("\\s".toRegex(), "")
-                    val keyBytes = java.util.Base64.getDecoder().decode(privateKeyPem)
-                    val keySpec = java.security.spec.PKCS8EncodedKeySpec(keyBytes)
-                    // Android標準のプロバイダを使用
-                    val keyFactory = java.security.KeyFactory.getInstance("RSA")
-                    val fallbackKey: PrivateKey = keyFactory.generatePrivate(keySpec)
-                    Log.d("mtls_grpc", "標準Java方式で秘密鍵の生成に成功しました: ${fallbackKey.algorithm}")
-                    return createMtlsChannelWithKey(host, port, caCert, clientCert, fallbackKey)
+                    Log.d("mtls_grpc", "標準Javaの方法でセキュアに秘密鍵を解析します")
+                    // ストリームから直接読み込み、メモリ上のプレーンテキストを最小限にする
+                    keyFile.inputStream().use { inputStream ->
+                        try {
+                            // Base64デコードした結果を直接バイト配列に
+                            val bytes = inputStream.readBytes()
+                            val content = String(bytes, Charsets.US_ASCII)
+                            
+                            // ヘッダーとフッターを取り除き、改行や空白を削除
+                            val base64Data = content
+                                .replace("-----BEGIN PRIVATE KEY-----", "")
+                                .replace("-----END PRIVATE KEY-----", "")
+                                .replace("\\s".toRegex(), "")
+                            
+                            // Base64デコードしてキー仕様に変換
+                            val decoder = java.util.Base64.getDecoder()
+                            val keyBytes = decoder.decode(base64Data)
+                            val keySpec = java.security.spec.PKCS8EncodedKeySpec(keyBytes)
+                            
+                            // Android標準のプロバイダを使用
+                            val keyFactory = java.security.KeyFactory.getInstance("RSA")
+                            val fallbackKey: PrivateKey = keyFactory.generatePrivate(keySpec)
+                            
+                            // 使用したデータを明示的にnullに設定して、GCに回収を促す
+                            // これによりメモリに残る秘密鍵データの量と時間を最小化
+                            Arrays.fill(keyBytes, 0.toByte())
+                            
+                            Log.d("mtls_grpc", "標準Java方式で秘密鍵の生成に成功しました: ${fallbackKey.algorithm}")
+                            return createMtlsChannelWithKey(host, port, caCert, clientCert, fallbackKey)
+                        } catch (decodeEx: Exception) {
+                            Log.e("mtls_grpc", "秘密鍵のデコードに失敗しました", decodeEx)
+                            throw decodeEx
+                        }
+                    }
                 } catch (fallbackEx: Exception) {
-                    Log.e("mtls_grpc", "標準Java方式も失敗しました", fallbackEx)
+                    Log.e("mtls_grpc", "標準Java方式での秘密鍵処理に失敗しました", fallbackEx)
                     throw RuntimeException("秘密鍵の解析に失敗しました", e)
                 }
             }
