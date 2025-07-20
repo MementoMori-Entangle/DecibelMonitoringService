@@ -46,3 +46,5 @@ app.*.map.json
 
 # certs
 /assets/certs
+key.properties
+my-release-key.jks
