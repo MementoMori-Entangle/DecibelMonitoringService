@@ -178,7 +178,7 @@ sudo apt install git
 クローンしてソース取得  
 git clone https://github.com/MementoMori-Entangle/DecibelMonitoringService.git
 
-# 証明書
+# 証明書関連
 リポジトリには/server/配下の  
 certs/  
 ca.crt  
@@ -186,6 +186,15 @@ client.crt
 client.key  
 server.crt  
 server.key  
+client/配下の  
+assets/certs/  
+ca.crt  
+client.crt  
+client.key  
+android/  
+key.properties  
+android/app/  
+my-release-key.jks  
 は登録されていません。  
 環境に合わせて作成してください。
 
