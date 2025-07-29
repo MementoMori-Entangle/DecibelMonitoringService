@@ -189,19 +189,11 @@ class _TopScreenState extends State<TopScreen> {
         timeout: Duration(milliseconds: _selectedConfig!.timeoutMillis),
       );
       // デシベル範囲で絞り込み
-      List<DecibelData> filtered = logs;
-      if (_minDecibel != null && _maxDecibel != null) {
-        filtered =
-            logs
-                .where(
-                  (d) => d.decibel >= _minDecibel! && d.decibel <= _maxDecibel!,
-                )
-                .toList();
-      } else if (_minDecibel != null) {
-        filtered = logs.where((d) => d.decibel >= _minDecibel!).toList();
-      } else if (_maxDecibel != null) {
-        filtered = logs.where((d) => d.decibel <= _maxDecibel!).toList();
-      }
+      List<DecibelData> filtered = _filterLogsByDecibelRange(
+        logs,
+        _minDecibel,
+        _maxDecibel,
+      );
       setState(() {
         _decibelList = filtered;
       });
@@ -214,6 +206,21 @@ class _TopScreenState extends State<TopScreen> {
         _loading = false;
       });
     }
+  }
+
+  List<DecibelData> _filterLogsByDecibelRange(
+    List<DecibelData> logs,
+    double? min,
+    double? max,
+  ) {
+    if (min != null && max != null) {
+      return logs.where((d) => d.decibel >= min && d.decibel <= max).toList();
+    } else if (min != null) {
+      return logs.where((d) => d.decibel >= min).toList();
+    } else if (max != null) {
+      return logs.where((d) => d.decibel <= max).toList();
+    }
+    return logs;
   }
 
   @override
