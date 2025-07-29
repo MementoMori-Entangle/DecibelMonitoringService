@@ -418,7 +418,7 @@ class _TopScreenState extends State<TopScreen> {
                     Expanded(
                       child: TextField(
                         controller: _maxDecibelController,
-                        keyboardType: TextInputType.numberWithOptions(
+                        keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
                         decoration: const InputDecoration(
