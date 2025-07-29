@@ -112,6 +112,12 @@ class _TopScreenState extends State<TopScreen> {
   List<DecibelData> _decibelList = [];
   ConnectionConfig? _selectedConfig;
 
+  // デシベル範囲用
+  final TextEditingController _minDecibelController = TextEditingController();
+  final TextEditingController _maxDecibelController = TextEditingController();
+  double? _minDecibel;
+  double? _maxDecibel;
+
   // gRPCクライアント
   late final GrpcClient _grpcClient;
   bool _loading = false;
@@ -125,6 +131,29 @@ class _TopScreenState extends State<TopScreen> {
     final now = DateTime.now();
     _startDate = DateTime(now.year, now.month, now.day);
     _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    _minDecibelController.addListener(_onMinDecibelChanged);
+    _maxDecibelController.addListener(_onMaxDecibelChanged);
+  }
+
+  @override
+  void dispose() {
+    _minDecibelController.dispose();
+    _maxDecibelController.dispose();
+    super.dispose();
+  }
+
+  void _onMinDecibelChanged() {
+    final text = _minDecibelController.text;
+    setState(() {
+      _minDecibel = double.tryParse(text);
+    });
+  }
+
+  void _onMaxDecibelChanged() {
+    final text = _maxDecibelController.text;
+    setState(() {
+      _maxDecibel = double.tryParse(text);
+    });
   }
 
   Future<void> _loadSelectedConfig() async {
@@ -159,8 +188,22 @@ class _TopScreenState extends State<TopScreen> {
         endDatetime: DateFormat(AppConfig.dateTimeFormat).format(_endDate!),
         timeout: Duration(milliseconds: _selectedConfig!.timeoutMillis),
       );
+      // デシベル範囲で絞り込み
+      List<DecibelData> filtered = logs;
+      if (_minDecibel != null && _maxDecibel != null) {
+        filtered =
+            logs
+                .where(
+                  (d) => d.decibel >= _minDecibel! && d.decibel <= _maxDecibel!,
+                )
+                .toList();
+      } else if (_minDecibel != null) {
+        filtered = logs.where((d) => d.decibel >= _minDecibel!).toList();
+      } else if (_maxDecibel != null) {
+        filtered = logs.where((d) => d.decibel <= _maxDecibel!).toList();
+      }
       setState(() {
-        _decibelList = logs;
+        _decibelList = filtered;
       });
     } catch (e) {
       setState(() {
@@ -219,129 +262,165 @@ class _TopScreenState extends State<TopScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: _startDate ?? DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                      );
-                      if (!mounted) return;
-                      if (pickedDate != null) {
-                        final pickedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.fromDateTime(
-                            _startDate ?? DateTime.now(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: _startDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (!mounted) return;
+                          if (pickedDate != null) {
+                            final pickedTime = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(
+                                _startDate ?? DateTime.now(),
+                              ),
+                            );
+                            if (!mounted) return;
+                            if (pickedTime != null) {
+                              setState(
+                                () =>
+                                    _startDate = DateTime(
+                                      pickedDate.year,
+                                      pickedDate.month,
+                                      pickedDate.day,
+                                      pickedTime.hour,
+                                      pickedTime.minute,
+                                    ),
+                              );
+                            } else {
+                              setState(
+                                () =>
+                                    _startDate = DateTime(
+                                      pickedDate.year,
+                                      pickedDate.month,
+                                      pickedDate.day,
+                                    ),
+                              );
+                            }
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(labelText: '開始日'),
+                          child: Text(
+                            _startDate == null
+                                ? ''
+                                : DateFormat(
+                                  AppConfig.inputCalendarFormat,
+                                ).format(_startDate!),
                           ),
-                        );
-                        if (!mounted) return;
-                        if (pickedTime != null) {
-                          setState(
-                            () =>
-                                _startDate = DateTime(
-                                  pickedDate.year,
-                                  pickedDate.month,
-                                  pickedDate.day,
-                                  pickedTime.hour,
-                                  pickedTime.minute,
-                                ),
-                          );
-                        } else {
-                          setState(
-                            () =>
-                                _startDate = DateTime(
-                                  pickedDate.year,
-                                  pickedDate.month,
-                                  pickedDate.day,
-                                ),
-                          );
-                        }
-                      }
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(labelText: '開始日'),
-                      child: Text(
-                        _startDate == null
-                            ? ''
-                            : DateFormat(
-                              AppConfig.inputCalendarFormat,
-                            ).format(_startDate!),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: _endDate ?? DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                      );
-                      if (!mounted) return;
-                      if (pickedDate != null) {
-                        final pickedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.fromDateTime(
-                            _endDate ?? DateTime.now(),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: _endDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (!mounted) return;
+                          if (pickedDate != null) {
+                            final pickedTime = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(
+                                _endDate ?? DateTime.now(),
+                              ),
+                            );
+                            if (!mounted) return;
+                            if (pickedTime != null) {
+                              setState(
+                                () =>
+                                    _endDate = DateTime(
+                                      pickedDate.year,
+                                      pickedDate.month,
+                                      pickedDate.day,
+                                      pickedTime.hour,
+                                      pickedTime.minute,
+                                    ),
+                              );
+                            } else {
+                              setState(
+                                () =>
+                                    _endDate = DateTime(
+                                      pickedDate.year,
+                                      pickedDate.month,
+                                      pickedDate.day,
+                                    ),
+                              );
+                            }
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(labelText: '終了日'),
+                          child: Text(
+                            _endDate == null
+                                ? ''
+                                : DateFormat(
+                                  AppConfig.inputCalendarFormat,
+                                ).format(_endDate!),
                           ),
-                        );
-                        if (!mounted) return;
-                        if (pickedTime != null) {
-                          setState(
-                            () =>
-                                _endDate = DateTime(
-                                  pickedDate.year,
-                                  pickedDate.month,
-                                  pickedDate.day,
-                                  pickedTime.hour,
-                                  pickedTime.minute,
-                                ),
-                          );
-                        } else {
-                          setState(
-                            () =>
-                                _endDate = DateTime(
-                                  pickedDate.year,
-                                  pickedDate.month,
-                                  pickedDate.day,
-                                ),
-                          );
-                        }
-                      }
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(labelText: '終了日'),
-                      child: Text(
-                        _endDate == null
-                            ? ''
-                            : DateFormat(
-                              AppConfig.inputCalendarFormat,
-                            ).format(_endDate!),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed:
+                          (_startDate != null && _endDate != null && !_loading)
+                              ? _fetchDecibelLogs
+                              : null,
+                      child:
+                          _loading
+                              ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text('表示'),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed:
-                      (_startDate != null && _endDate != null && !_loading)
-                          ? _fetchDecibelLogs
-                          : null,
-                  child:
-                      _loading
-                          ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Text('表示'),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _minDecibelController,
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: '最小デシベル値',
+                          hintText: '例: 40',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _maxDecibelController,
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: '最大デシベル値',
+                          hintText: '例: 80',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
