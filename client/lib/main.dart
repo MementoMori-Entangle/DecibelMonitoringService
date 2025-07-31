@@ -80,8 +80,9 @@ Future<void> runDecibelMonitorTask() async {
         maxDbTime = maxData.datetime;
       }
       if (kDebugMode) log('[BG] 通知送信: 最大デシベル値=$maxDb, 日時=$maxDbTime');
+      final uniqueNotificationId = DateTime.now().millisecondsSinceEpoch;
       await flutterLocalNotificationsPlugin.show(
-        0,
+        uniqueNotificationId,
         'デシベル警告',
         '閾値${threshold}dBを超えました: 最大${maxDb.toStringAsFixed(1)}dB（$maxDbTime）',
         const NotificationDetails(
