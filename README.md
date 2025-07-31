@@ -259,7 +259,7 @@ After=postgresql@15-main.service
 Requires=postgresql@15-main.service  
 で制御してください。
 
-# ライセンス 2025年7月20日時点
+# ライセンス 2025年7月31日時点
 ・server  
 python
 | パッケージ名       | ライセンス      |
@@ -285,20 +285,23 @@ python
 
 ・client  
 Dart/Flutter
-| パッケージ名                 | バージョン   | ライセンス   |
-|-----------------------------|-------------|-------------|
-| flutter                     | SDK         | BSD-3       |
-| cupertino_icons             | ^1.0.8      | MIT         |
-| grpc                        | ^4.0.4      | BSD-3       |
-| local_auth                  | ^2.1.8      | BSD-3       |
-| fl_chart                    | ^0.66.2     | MIT         |
-| intl                        | ^0.19.0     | BSD-3       |
-| protobuf                    | ^4.1.0      | BSD-3       |
-| provider                    | ^6.1.2      | MIT         |
-| shared_preferences          | ^2.5.3      | BSD-3       |
-| flutter_launcher_icons      | ^0.14.4     | MIT         |
-| flutter_test                | SDK         | BSD-3       |
-| flutter_lints               | ^5.0.0      | BSD-3       |
+| パッケージ名                 | バージョン   | ライセンス    |
+|-----------------------------|-------------|--------------|
+| flutter                     | SDK         | BSD-3        |
+| cupertino_icons             | ^1.0.8      | MIT          |
+| grpc                        | ^4.0.4      | BSD-3        |
+| local_auth                  | ^2.1.8      | BSD-3        |
+| fl_chart                    | ^0.66.2     | MIT          |
+| intl                        | ^0.19.0     | BSD-3        |
+| protobuf                    | ^4.1.0      | BSD-3        |
+| provider                    | ^6.1.2      | MIT          |
+| shared_preferences          | ^2.5.3      | BSD-3        |
+| flutter_launcher_icons      | ^0.14.4     | MIT          |
+| flutter_test                | SDK         | BSD-3        |
+| flutter_lints               | ^5.0.0      | BSD-3        |
+| workmanager                 | ^0.7.0      | MIT          |
+| flutter_local_notifications | ^19.4.0     | BSD-3-Clause |
+| permission_handler          | ^11.3.1     | BSD-3-Clause |
 
 Android/Java(kotlin)
 | パッケージ名                              | バージョン   | ライセンス      |
@@ -309,4 +312,5 @@ Android/Java(kotlin)
 | javax.annotation:javax.annotation-api    | 1.3.2	     | CDDL/GPL-2.0   |
 | org.bouncycastle:bcprov-jdk18on          | 1.78.1	     | MIT            |
 | org.bouncycastle:bcpkix-jdk18on          | 1.78.1	     | MIT            |
+| com.android.tools:desugar_jdk_libs       | 2.1.4       | Apache-2.0     |
 
