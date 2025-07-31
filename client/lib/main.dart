@@ -46,8 +46,12 @@ Future<void> runDecibelMonitorTask() async {
   final threshold = await settings.getDecibelThreshold();
   // 監視間隔前～現在のデータ取得
   final now = DateTime.now();
+  final userInterval = await settings.getAutoWatchIntervalSec();
+  final interval = (userInterval != null && userInterval > 0)
+      ? userInterval
+      : AppConfig.defaultAutoWatchIntervalSec;
   final start = now.subtract(
-    Duration(seconds: AppConfig.defaultAutoWatchIntervalSec),
+    Duration(seconds: interval),
   );
   if (kDebugMode) {
     log(
