@@ -18,7 +18,7 @@ import 'settings_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+  Workmanager().initialize(callbackDispatcher, isInDebugMode: kDebugMode);
   runApp(const MyApp());
 }
 
