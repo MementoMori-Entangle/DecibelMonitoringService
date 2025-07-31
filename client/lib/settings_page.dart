@@ -186,7 +186,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               decoration: const InputDecoration(
                 labelText: '監視間隔（秒）',
-                hintText: '${AppConfig.defaultAutoWatchIntervalSec}以上の整数',
+                hintText: '${AppConfig.defaultAutoWatchIntervalSec}以上の整数（最低値: 900秒）',
               ),
               onSubmitted: (v) {
                 final val =
