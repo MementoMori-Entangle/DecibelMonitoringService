@@ -188,7 +188,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 labelText: '監視間隔（秒）',
                 hintText: '${AppConfig.defaultAutoWatchIntervalSec}以上の整数',
               ),
-              onChanged: (v) {
+              onSubmitted: (v) {
                 final val =
                     int.tryParse(v) ?? AppConfig.defaultAutoWatchIntervalSec;
                 setState(() {
