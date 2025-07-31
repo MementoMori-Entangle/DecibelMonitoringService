@@ -1,9 +1,13 @@
+import 'dart:developer';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:workmanager/workmanager.dart';
 
 import 'chart_page.dart';
 import 'config.dart';
@@ -13,7 +17,116 @@ import 'settings_page.dart';
 import 'settings_service.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
   runApp(const MyApp());
+}
+
+// バックグラウンドタスクのエントリポイント
+@pragma('vm:entry-point')
+// 監視処理本体（初回即時実行にも利用）
+Future<void> runDecibelMonitorTask() async {
+  // 通知初期化
+  final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  // 設定取得
+  final settings = SettingsService();
+  final configs = await settings.getConfigs();
+  final idx = await settings.getSelectedConfigIndex();
+  if (configs.isEmpty) {
+    if (kDebugMode) log('[BG] 設定が空のため処理中断');
+    return;
+  }
+  final config = configs[idx.clamp(0, configs.length - 1)];
+  final threshold = await settings.getDecibelThreshold();
+  // 監視間隔前～現在のデータ取得
+  final now = DateTime.now();
+  final start = now.subtract(
+    Duration(seconds: AppConfig.defaultAutoWatchIntervalSec),
+  );
+  if (kDebugMode) {
+    log(
+      '[BG] gRPCリクエスト送信: host=${config.host}, port=${config.port}, start=$start, end=$now, threshold=$threshold',
+    );
+  }
+  try {
+    final grpcClient = createGrpcClient();
+    final logs = await grpcClient.fetchDecibelLogs(
+      host: config.host,
+      port: config.port,
+      accessToken: config.accessToken,
+      startDatetime: DateFormat(AppConfig.dateTimeFormat).format(start),
+      endDatetime: DateFormat(AppConfig.dateTimeFormat).format(now),
+      timeout: Duration(milliseconds: config.timeoutMillis),
+    );
+    if (kDebugMode) log('[BG] gRPCレスポンス件数: ${logs.length}');
+    // 閾値超えがあれば通知
+    final over = logs.where((d) => d.decibel > threshold).toList();
+    if (kDebugMode) log('[BG] 閾値超え件数: ${over.length}');
+    if (over.isNotEmpty) {
+      // 最大デシベル値とそのデータ
+      final maxData = over.reduce((a, b) => a.decibel >= b.decibel ? a : b);
+      final maxDb = maxData.decibel;
+      String maxDbTime;
+      try {
+        final dt = DateFormat(AppConfig.dateTimeFormat).parse(maxData.datetime);
+        maxDbTime = DateFormat('yyyy/MM/dd HH:mm:ss').format(dt);
+      } catch (_) {
+        maxDbTime = maxData.datetime;
+      }
+      if (kDebugMode) log('[BG] 通知送信: 最大デシベル値=$maxDb, 日時=$maxDbTime');
+      await flutterLocalNotificationsPlugin.show(
+        0,
+        'デシベル警告',
+        '閾値${threshold}dBを超えました: 最大${maxDb.toStringAsFixed(1)}dB（$maxDbTime）',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'decibel_channel',
+            'Decibel Notifications',
+            channelDescription: 'デシベル閾値超え通知',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+        ),
+      );
+    }
+  } catch (e) {
+    if (kDebugMode) log('[BG] gRPC/通知処理エラー: $e');
+  }
+}
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    await runDecibelMonitorTask();
+    return Future.value(true);
+  });
+}
+
+Future<void> registerAutoWatchTaskIfNeeded() async {
+  final settings = SettingsService();
+  final enabled = await settings.getAutoWatchEnabled();
+  final interval = await settings.getAutoWatchIntervalSec();
+  final minInterval = AppConfig.defaultAutoWatchIntervalSec;
+  if (enabled) {
+    final freq = interval < minInterval ? minInterval : interval;
+    // 初回のみ即時実行
+    await runDecibelMonitorTask();
+    await Workmanager().registerPeriodicTask(
+      'autoWatchTask',
+      'autoWatchTask',
+      frequency: Duration(seconds: freq),
+      initialDelay: const Duration(seconds: 0),
+      constraints: Constraints(networkType: NetworkType.connected),
+    );
+  } else {
+    await Workmanager().cancelByUniqueName('autoWatchTask');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -65,6 +178,9 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
     if (authenticated && mounted) {
+      // ログイン成功時にバックグラウンド監視タスクを登録
+      await registerAutoWatchTaskIfNeeded();
+      if (!mounted) return;
       Navigator.of(
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => const TopScreen()));
@@ -107,6 +223,8 @@ class TopScreen extends StatefulWidget {
 }
 
 class _TopScreenState extends State<TopScreen> {
+  // 設定画面で設定された閾値（リスト表示用）
+  double? _decibelThreshold;
   DateTime? _startDate;
   DateTime? _endDate;
   List<DecibelData> _decibelList = [];
@@ -128,11 +246,21 @@ class _TopScreenState extends State<TopScreen> {
     super.initState();
     _grpcClient = createGrpcClient();
     _loadSelectedConfig();
+    _loadThreshold();
     final now = DateTime.now();
     _startDate = DateTime(now.year, now.month, now.day);
     _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     _minDecibelController.addListener(_onMinDecibelChanged);
     _maxDecibelController.addListener(_onMaxDecibelChanged);
+  }
+
+  Future<void> _loadThreshold() async {
+    final t = await SettingsService().getDecibelThreshold();
+    if (mounted) {
+      setState(() {
+        _decibelThreshold = t;
+      });
+    }
   }
 
   @override
@@ -238,6 +366,7 @@ class _TopScreenState extends State<TopScreen> {
               ).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
               // 設定画面から戻ったら再取得
               await _loadSelectedConfig();
+              await _loadThreshold();
             },
           ),
           IconButton(
@@ -453,9 +582,16 @@ class _TopScreenState extends State<TopScreen> {
                 } catch (e) {
                   formattedDate = d.datetime;
                 }
+                final threshold =
+                    _decibelThreshold ?? AppConfig.defaultDecibelThreshold;
+                final isOver =
+                    _decibelThreshold != null && d.decibel > threshold;
                 return ListTile(
                   title: Text(formattedDate),
-                  subtitle: Text('${d.decibel.toStringAsFixed(2)} dB'),
+                  subtitle: Text(
+                    '${d.decibel.toStringAsFixed(2)} dB',
+                    style: TextStyle(color: isOver ? Colors.red : null),
+                  ),
                 );
               },
             ),

@@ -33,6 +33,41 @@ class ConnectionConfig {
 }
 
 class SettingsService {
+  static const _decibelThresholdKey = 'decibelThreshold';
+  Future<double> getDecibelThreshold() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_decibelThresholdKey) ??
+        AppConfig.defaultDecibelThreshold;
+  }
+
+  Future<void> setDecibelThreshold(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_decibelThresholdKey, value);
+  }
+
+  static const _autoWatchEnabledKey = 'autoWatchEnabled';
+  static const _autoWatchIntervalSecKey = 'autoWatchIntervalSec';
+  Future<bool> getAutoWatchEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_autoWatchEnabledKey) ?? false;
+  }
+
+  Future<void> setAutoWatchEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoWatchEnabledKey, enabled);
+  }
+
+  Future<int> getAutoWatchIntervalSec() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_autoWatchIntervalSecKey) ??
+        AppConfig.defaultAutoWatchIntervalSec;
+  }
+
+  Future<void> setAutoWatchIntervalSec(int sec) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_autoWatchIntervalSecKey, sec);
+  }
+
   static const _configsKey = 'connectionConfigs';
   static const _selectedIndexKey = 'selectedConfigIndex';
 

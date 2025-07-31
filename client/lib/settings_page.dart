@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import 'config.dart';
+import 'main.dart' show registerAutoWatchTaskIfNeeded;
 import 'settings_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -9,28 +13,53 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  @override
+  void initState() {
+    super.initState();
+    _requestNotificationPermission();
+    _load();
+    _intervalController.text = AppConfig.defaultAutoWatchIntervalSec.toString();
+    _thresholdController.text = AppConfig.defaultDecibelThreshold.toString();
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    await Permission.notification.request();
+  }
+
+  final TextEditingController _thresholdController = TextEditingController();
+  double _decibelThreshold = AppConfig.defaultDecibelThreshold;
+  bool _autoWatchEnabled = false;
+  final TextEditingController _intervalController = TextEditingController();
+  int _autoWatchIntervalSec = AppConfig.defaultAutoWatchIntervalSec;
   final _settings = SettingsService();
   List<ConnectionConfig> _configs = [];
   int _selectedIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
   Future<void> _load() async {
     final configs = await _settings.getConfigs();
     final idx = await _settings.getSelectedConfigIndex();
+    final enabled = await _settings.getAutoWatchEnabled();
+    final interval = await _settings.getAutoWatchIntervalSec();
+    final threshold = await _settings.getDecibelThreshold();
     setState(() {
       _configs = configs;
       _selectedIndex = idx.clamp(0, configs.length - 1);
+      _autoWatchEnabled = enabled;
+      _autoWatchIntervalSec = interval;
+      _intervalController.text = interval.toString();
+      _decibelThreshold = threshold;
+      _thresholdController.text = threshold.toString();
     });
   }
 
   Future<void> _save() async {
     await _settings.saveConfigs(_configs);
     await _settings.setSelectedConfigIndex(_selectedIndex);
+    await _settings.setAutoWatchEnabled(_autoWatchEnabled);
+    await _settings.setAutoWatchIntervalSec(_autoWatchIntervalSec);
+    await _settings.setDecibelThreshold(_decibelThreshold);
+    // 監視タスクの登録/解除を即時反映
+    await registerAutoWatchTaskIfNeeded();
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -123,6 +152,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   @override
+  void dispose() {
+    _intervalController.dispose();
+    _thresholdController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('接続先設定')),
@@ -130,6 +166,61 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.all(16),
         children: [
           ...List.generate(_configs.length, _buildConfigEditor),
+          const SizedBox(height: 24),
+          SwitchListTile(
+            title: const Text('自動監視（バックグラウンド取得&通知）'),
+            value: _autoWatchEnabled,
+            onChanged: (v) {
+              setState(() {
+                _autoWatchEnabled = v;
+              });
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: TextField(
+              controller: _intervalController,
+              enabled: _autoWatchEnabled,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: false,
+              ),
+              decoration: const InputDecoration(
+                labelText: '監視間隔（秒）',
+                hintText: '${AppConfig.defaultAutoWatchIntervalSec}以上の整数',
+              ),
+              onChanged: (v) {
+                final val =
+                    int.tryParse(v) ?? AppConfig.defaultAutoWatchIntervalSec;
+                setState(() {
+                  _autoWatchIntervalSec =
+                      val < AppConfig.defaultAutoWatchIntervalSec
+                          ? AppConfig.defaultAutoWatchIntervalSec
+                          : val;
+                  _intervalController.text = _autoWatchIntervalSec.toString();
+                });
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: TextField(
+              controller: _thresholdController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'デシベル閾値',
+                hintText: '例: 70.0',
+              ),
+              onChanged: (v) {
+                final val = double.tryParse(v) ?? 70.0;
+                setState(() {
+                  _decibelThreshold = val;
+                  _thresholdController.text = _decibelThreshold.toString();
+                });
+              },
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
