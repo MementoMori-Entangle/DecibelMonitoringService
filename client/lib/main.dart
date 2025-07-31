@@ -47,12 +47,9 @@ Future<void> runDecibelMonitorTask() async {
   // 監視間隔前～現在のデータ取得
   final now = DateTime.now();
   final userInterval = await settings.getAutoWatchIntervalSec();
-  final interval = (userInterval != null && userInterval > 0)
-      ? userInterval
-      : AppConfig.defaultAutoWatchIntervalSec;
-  final start = now.subtract(
-    Duration(seconds: interval),
-  );
+  final interval =
+      (userInterval > 0) ? userInterval : AppConfig.defaultAutoWatchIntervalSec;
+  final start = now.subtract(Duration(seconds: interval));
   if (kDebugMode) {
     log(
       '[BG] gRPCリクエスト送信: host=${config.host}, port=${config.port}, start=$start, end=$now, threshold=$threshold',
