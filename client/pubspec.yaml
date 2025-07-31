@@ -43,6 +43,9 @@ dependencies:
   provider: ^6.1.2
   shared_preferences: ^2.5.3
   flutter_launcher_icons: ^0.14.4
+  workmanager: ^0.7.0
+  flutter_local_notifications: ^19.4.0
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
