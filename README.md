@@ -2,6 +2,22 @@
 
 ラズパイ + USBマイクでデシベルロガー
 
+# リリース v1.0.0
+1. サーバー  
+　1.1. デシベル値ロガー(マイク接続端末)  
+　1.2. デシベル値取得API(gRPC)  
+　1.3. アクセストークン設定(Web or psql)  
+　1.4. デシベル値取得テスト用クライアント(python + PyQt5)  
+2. クライアント  
+　　デシベル値表示Androidアプリ(DecibelLogViewer)  
+　2.1. 認証機能(ローカル認証機能経由)  
+　2.2. メイン画面(デシベル値リスト)  
+　　　開始日時から終了日時で検索  
+　2.3. ヘッダに「設定画面」「グラフ画面」「バックグラウンド」への導線アイコン  
+　2.4. 設定画面(デシベル値取得接続先)  
+　2.5. グラフ画面(メイン画面で取得したデシベル値リストをグラフ表示)  
+　2.6. バックグラウンド(へ)
+
 # クライアントアプリについて
 server内にあるdecibel_client_app.pyは簡易確認用です。  
 実際のクライアントはclient内のFlutter(Android)アプリです。
@@ -234,7 +250,7 @@ set GRPC_SERVER_AUTH=tls
 export GRPC_SERVER_AUTH=tls   
 ・mTLS  
 set GRPC_SERVER_AUTH=mtls  
-export GRPC_SERVER_AUTH=tls
+export GRPC_SERVER_AUTH=mtls
 
 アクセスログipv4登録設定 (ipv6で登録する場合はfalse)  
 set GRPC_LOG_IPV4_ONLY=true  
