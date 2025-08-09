@@ -125,7 +125,7 @@ class _MapPageState extends State<MapPage> {
                     ),
               );
             },
-            child: Icon(Icons.location_on, color: Colors.red, size: 36),
+            child: const Icon(Icons.location_on, color: Colors.red, size: 36),
           ),
         ),
       );
