@@ -340,7 +340,8 @@ class _TopScreenState extends State<TopScreen> {
       setState(() {
         _decibelList = filtered;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error fetching decibel logs: $e', stackTrace: stackTrace, name: '_fetchDecibelLogs');
       setState(() {
         _error = 'データの取得に失敗しました。';
       });
