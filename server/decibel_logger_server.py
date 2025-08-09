@@ -170,7 +170,7 @@ class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
         log_access(ip_addr, request.access_token, True, 'OK')
         logs = fetch_decibel_logs(start_dt, end_dt)
         response = decibel_logger_pb2.DecibelLogResponse()
-        use_gps = hasattr(request, 'use_gps') and request.use_gps
+        use_gps = request.HasField('use_gps') and request.use_gps
         if use_gps:
             gps_logs = fetch_gps_logs(start_dt, end_dt)
             gps_dict = build_gps_dict(gps_logs)
