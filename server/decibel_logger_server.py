@@ -10,6 +10,7 @@ import psycopg2
 sys.path.append(os.path.join(os.path.dirname(__file__), '../proto'))
 import decibel_logger_pb2
 import decibel_logger_pb2_grpc
+from gps_log_util import fetch_gps_logs, build_gps_dict
 from config import (ACCESS_LOG_TABLE, AUTH_MODE, DB_HOST, DB_NAME, DB_PASS,
                     DB_PORT, DB_USER, DECIBEL_LOG_TABLE, LOG_IPV4_ONLY, PORT,
                     SLEEP_TIME)
@@ -168,9 +169,18 @@ class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
         log_access(ip_addr, request.access_token, True, 'OK')
         logs = fetch_decibel_logs(start_dt, end_dt)
         response = decibel_logger_pb2.DecibelLogResponse()
-        for row in logs:
-            dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
-            response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1]))
+        if getattr(request, 'use_gps', False):
+            gps_logs = fetch_gps_logs(start_dt, end_dt)
+            gps_dict = build_gps_dict(gps_logs)
+            for row in logs:
+                ts = row[0].replace(microsecond=0)
+                lat, lng = gps_dict.get(ts, (0.0, 0.0))
+                dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
+                response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1], latitude=lat, longitude=lng))
+        else:
+            for row in logs:
+                dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
+                response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1]))
         return response
 
 def serve():

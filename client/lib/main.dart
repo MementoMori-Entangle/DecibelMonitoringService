@@ -13,6 +13,7 @@ import 'chart_page.dart';
 import 'config.dart';
 import 'generated/decibel_logger.pbgrpc.dart';
 import 'grpc_client_io.dart';
+import 'map_page.dart';
 import 'settings_page.dart';
 import 'settings_service.dart';
 
@@ -230,6 +231,7 @@ class _TopScreenState extends State<TopScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   List<DecibelData> _decibelList = [];
+  bool _showGps = false;
   ConnectionConfig? _selectedConfig;
 
   // デシベル範囲用
@@ -249,11 +251,21 @@ class _TopScreenState extends State<TopScreen> {
     _grpcClient = createGrpcClient();
     _loadSelectedConfig();
     _loadThreshold();
+    _loadShowGps();
     final now = DateTime.now();
     _startDate = DateTime(now.year, now.month, now.day);
     _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     _minDecibelController.addListener(_onMinDecibelChanged);
     _maxDecibelController.addListener(_onMaxDecibelChanged);
+  }
+
+  Future<void> _loadShowGps() async {
+    final s = await SettingsService().getShowGps();
+    if (mounted) {
+      setState(() {
+        _showGps = s ?? false;
+      });
+    }
   }
 
   Future<void> _loadThreshold() async {
@@ -317,6 +329,7 @@ class _TopScreenState extends State<TopScreen> {
         startDatetime: DateFormat(AppConfig.dateTimeFormat).format(_startDate!),
         endDatetime: DateFormat(AppConfig.dateTimeFormat).format(_endDate!),
         timeout: Duration(milliseconds: _selectedConfig!.timeoutMillis),
+        useGps: _showGps,
       );
       // デシベル範囲で絞り込み
       List<DecibelData> filtered = _filterLogsByDecibelRange(
@@ -329,7 +342,7 @@ class _TopScreenState extends State<TopScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = 'データの取得に失敗しました。';
       });
     } finally {
       setState(() {
@@ -369,6 +382,7 @@ class _TopScreenState extends State<TopScreen> {
               // 設定画面から戻ったら再取得
               await _loadSelectedConfig();
               await _loadThreshold();
+              await _loadShowGps();
             },
           ),
           IconButton(
@@ -382,6 +396,18 @@ class _TopScreenState extends State<TopScreen> {
               );
             },
           ),
+          if (_showGps)
+            IconButton(
+              icon: const Icon(Icons.explore),
+              tooltip: '地図表示',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MapPage(decibelList: _decibelList),
+                  ),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             tooltip: 'アプリを終了',
@@ -586,14 +612,37 @@ class _TopScreenState extends State<TopScreen> {
                 }
                 final threshold =
                     _decibelThreshold ?? AppConfig.defaultDecibelThreshold;
-                final isOver =
-                    _decibelThreshold != null && d.decibel > threshold;
+                final isOver = d.decibel > threshold;
                 return ListTile(
                   title: Text(formattedDate),
-                  subtitle: Text(
-                    '${d.decibel.toStringAsFixed(2)} dB',
-                    style: TextStyle(color: isOver ? Colors.red : null),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${d.decibel.toStringAsFixed(2)} dB',
+                        style: TextStyle(color: isOver ? Colors.red : null),
+                      ),
+                      if (_showGps && (d.latitude != 0.0 || d.longitude != 0.0))
+                        Text(
+                          'GPS: ${d.latitude}, ${d.longitude}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                    ],
                   ),
+                  onTap: () async {
+                    String copyText =
+                        '日時: $formattedDate\n'
+                        'デシベル: ${d.decibel.toStringAsFixed(2)} dB';
+                    if (_showGps && (d.latitude != 0.0 || d.longitude != 0.0)) {
+                      copyText += '\nGPS: ${d.latitude}, ${d.longitude}';
+                    }
+                    await Clipboard.setData(ClipboardData(text: copyText));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('コピーしました')));
+                    }
+                  },
                 );
               },
             ),

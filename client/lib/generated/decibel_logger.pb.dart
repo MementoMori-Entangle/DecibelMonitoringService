@@ -21,11 +21,13 @@ class DecibelLogRequest extends $pb.GeneratedMessage {
     $core.String? accessToken,
     $core.String? startDatetime,
     $core.String? endDatetime,
+    $core.bool? useGps,
   }) {
     final result = create();
     if (accessToken != null) result.accessToken = accessToken;
     if (startDatetime != null) result.startDatetime = startDatetime;
     if (endDatetime != null) result.endDatetime = endDatetime;
+    if (useGps != null) result.useGps = useGps;
     return result;
   }
 
@@ -45,6 +47,7 @@ class DecibelLogRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'accessToken')
     ..aOS(2, _omitFieldNames ? '' : 'startDatetime')
     ..aOS(3, _omitFieldNames ? '' : 'endDatetime')
+    ..aOB(4, _omitFieldNames ? '' : 'useGps')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -94,16 +97,29 @@ class DecibelLogRequest extends $pb.GeneratedMessage {
   $core.bool hasEndDatetime() => $_has(2);
   @$pb.TagNumber(3)
   void clearEndDatetime() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get useGps => $_getBF(3);
+  @$pb.TagNumber(4)
+  set useGps($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasUseGps() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearUseGps() => $_clearField(4);
 }
 
 class DecibelData extends $pb.GeneratedMessage {
   factory DecibelData({
     $core.String? datetime,
     $core.double? decibel,
+    $core.double? latitude,
+    $core.double? longitude,
   }) {
     final result = create();
     if (datetime != null) result.datetime = datetime;
     if (decibel != null) result.decibel = decibel;
+    if (latitude != null) result.latitude = latitude;
+    if (longitude != null) result.longitude = longitude;
     return result;
   }
 
@@ -122,6 +138,8 @@ class DecibelData extends $pb.GeneratedMessage {
       createEmptyInstance: create)
     ..aOS(1, _omitFieldNames ? '' : 'datetime')
     ..a<$core.double>(2, _omitFieldNames ? '' : 'decibel', $pb.PbFieldType.OF)
+    ..a<$core.double>(3, _omitFieldNames ? '' : 'latitude', $pb.PbFieldType.OD)
+    ..a<$core.double>(4, _omitFieldNames ? '' : 'longitude', $pb.PbFieldType.OD)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -161,6 +179,24 @@ class DecibelData extends $pb.GeneratedMessage {
   $core.bool hasDecibel() => $_has(1);
   @$pb.TagNumber(2)
   void clearDecibel() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.double get latitude => $_getN(2);
+  @$pb.TagNumber(3)
+  set latitude($core.double value) => $_setDouble(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasLatitude() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearLatitude() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.double get longitude => $_getN(3);
+  @$pb.TagNumber(4)
+  set longitude($core.double value) => $_setDouble(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLongitude() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLongitude() => $_clearField(4);
 }
 
 class DecibelLogResponse extends $pb.GeneratedMessage {

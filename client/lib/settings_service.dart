@@ -33,6 +33,37 @@ class ConnectionConfig {
 }
 
 class SettingsService {
+  static const _pinClusterRadiusKey = 'pinClusterRadiusMeter';
+
+  Future<double> getPinClusterRadiusMeter() async {
+    final prefs = await SharedPreferences.getInstance();
+    final v = prefs.getDouble(_pinClusterRadiusKey);
+    if (v == null || v < AppConfig.minPinClusterRadiusMeter) {
+      return AppConfig.defaultPinClusterRadiusMeter;
+    }
+    return v;
+  }
+
+  Future<void> setPinClusterRadiusMeter(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final v =
+        value < AppConfig.minPinClusterRadiusMeter
+            ? AppConfig.minPinClusterRadiusMeter
+            : value;
+    await prefs.setDouble(_pinClusterRadiusKey, v);
+  }
+
+  static const _showGpsKey = 'showGps';
+  Future<bool?> getShowGps() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_showGpsKey);
+  }
+
+  Future<void> setShowGps(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showGpsKey, value);
+  }
+
   static const _decibelThresholdKey = 'decibelThreshold';
   Future<double> getDecibelThreshold() async {
     final prefs = await SharedPreferences.getInstance();
