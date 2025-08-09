@@ -342,7 +342,11 @@ class _TopScreenState extends State<TopScreen> {
       });
     } catch (e, stackTrace) {
       if (kDebugMode) {
-        log('Error fetching decibel logs: $e', stackTrace: stackTrace, name: '_fetchDecibelLogs');
+        log(
+          'Error fetching decibel logs: $e',
+          stackTrace: stackTrace,
+          name: '_fetchDecibelLogs',
+        );
       } else {
         log('Error fetching decibel logs', name: '_fetchDecibelLogs');
       }

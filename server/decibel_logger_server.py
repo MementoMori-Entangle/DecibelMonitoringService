@@ -88,30 +88,37 @@ def log_access(ip_addr, access_token, success, reason):
         print(f"[ACCESS LOGGING ERROR] {e}", flush=True)
 
 def fetch_decibel_logs(start_dt=None, end_dt=None):
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
-    with conn.cursor() as cur:
-        base_query = sql.SQL("SELECT timestamp, decibel_a FROM {}").format(sql.Identifier(DECIBEL_LOG_TABLE))
-        where_clauses = []
-        params = []
-        if start_dt:
-            where_clauses.append(sql.SQL("timestamp >= %s"))
-            params.append(start_dt)
-        if end_dt:
-            where_clauses.append(sql.SQL("timestamp <= %s"))
-            params.append(end_dt)
-        if where_clauses:
-            base_query = base_query + sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
-        base_query = base_query + sql.SQL(" ORDER BY timestamp ASC")
-        cur.execute(base_query, params)
-        results = cur.fetchall()
-    conn.close()
-    return results
+    conn = None
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS
+        )
+        with conn.cursor() as cur:
+            base_query = sql.SQL("SELECT timestamp, decibel_a FROM {}").format(
+                                                        sql.Identifier(DECIBEL_LOG_TABLE))
+            where_clauses = []
+            params = []
+            if start_dt:
+                where_clauses.append(sql.SQL("timestamp >= %s"))
+                params.append(start_dt)
+            if end_dt:
+                where_clauses.append(sql.SQL("timestamp <= %s"))
+                params.append(end_dt)
+            if where_clauses:
+                base_query = base_query + sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
+            base_query = base_query + sql.SQL(" ORDER BY timestamp ASC")
+            cur.execute(base_query, params)
+            results = cur.fetchall()
+            return results
+    except Exception as e:
+        return []
+    finally:
+        if conn:
+            conn.close()
 
 class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
     def GetDecibelLog(self, request, context):
@@ -170,7 +177,7 @@ class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
         log_access(ip_addr, request.access_token, True, 'OK')
         logs = fetch_decibel_logs(start_dt, end_dt)
         response = decibel_logger_pb2.DecibelLogResponse()
-        use_gps = request.HasField('use_gps') and request.use_gps
+        use_gps = hasattr(request, 'use_gps') and request.use_gps
         if use_gps:
             gps_logs = fetch_gps_logs(start_dt, end_dt)
             gps_dict = build_gps_dict(gps_logs)
