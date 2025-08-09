@@ -18,6 +18,11 @@
 　2.5. グラフ画面(メイン画面で取得したデシベル値リストをグラフ表示)  
 　2.6. バックグラウンド(へ)
 
+# GPSデータ連動における、外部DBテーブル参照設定
+GPSデータはhttps://github.com/MementoMori-Entangle/GPSOutputLogger  
+のサービスで登録されたDBデータを使用している関係上、外部DBテーブルを参照する必要があります。  
+PostgreSQLで外部参照できるよう設定が必要です。
+
 # クライアントアプリについて
 server内にあるdecibel_client_app.pyは簡易確認用です。  
 実際のクライアントはclient内のFlutter(Android)アプリです。
