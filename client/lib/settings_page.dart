@@ -219,7 +219,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 }
                 setState(() {
                   _pinClusterRadius = val;
-                  _pinClusterRadiusController.text = val.toString();
                 });
               },
               onEditingComplete: () {
