@@ -341,7 +341,11 @@ class _TopScreenState extends State<TopScreen> {
         _decibelList = filtered;
       });
     } catch (e, stackTrace) {
-      log('Error fetching decibel logs: $e', stackTrace: stackTrace, name: '_fetchDecibelLogs');
+      if (kDebugMode) {
+        log('Error fetching decibel logs: $e', stackTrace: stackTrace, name: '_fetchDecibelLogs');
+      } else {
+        log('Error fetching decibel logs', name: '_fetchDecibelLogs');
+      }
       setState(() {
         _error = 'データの取得に失敗しました。';
       });
