@@ -3,6 +3,7 @@ import sys
 import time
 from concurrent import futures
 from datetime import datetime
+from psycopg2 import sql
 
 import grpc
 import psycopg2
@@ -95,19 +96,19 @@ def fetch_decibel_logs(start_dt=None, end_dt=None):
         password=DB_PASS
     )
     with conn.cursor() as cur:
-        query = f"SELECT timestamp, decibel_a FROM {DECIBEL_LOG_TABLE}"
+        base_query = sql.SQL("SELECT timestamp, decibel_a FROM {}").format(sql.Identifier(DECIBEL_LOG_TABLE))
+        where_clauses = []
         params = []
-        if start_dt and end_dt:
-            query += " WHERE timestamp >= %s AND timestamp <= %s"
-            params = [start_dt, end_dt]
-        elif start_dt:
-            query += " WHERE timestamp >= %s"
-            params = [start_dt]
-        elif end_dt:
-            query += " WHERE timestamp <= %s"
-            params = [end_dt]
-        query += " ORDER BY timestamp ASC"
-        cur.execute(query, params)
+        if start_dt:
+            where_clauses.append(sql.SQL("timestamp >= %s"))
+            params.append(start_dt)
+        if end_dt:
+            where_clauses.append(sql.SQL("timestamp <= %s"))
+            params.append(end_dt)
+        if where_clauses:
+            base_query = base_query + sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
+        base_query = base_query + sql.SQL(" ORDER BY timestamp ASC")
+        cur.execute(base_query, params)
         results = cur.fetchall()
     conn.close()
     return results
