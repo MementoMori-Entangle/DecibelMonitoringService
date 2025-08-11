@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:external_path/external_path.dart';
 import 'package:file_picker/file_picker.dart';
@@ -396,9 +397,9 @@ class _TopScreenState extends State<TopScreen> {
         AppConfig.downloadPath,
       );
       final file = File('$downloadPath/$filename.${AppConfig.csvFileExp}');
-      await file.writeAsBytes(Uint8List.fromList(csv.codeUnits));
+      await file.writeAsBytes(Uint8List.fromList(utf8.encode(csv)));
     } else {
-      final bytes = Uint8List.fromList(csv.codeUnits);
+      final bytes = Uint8List.fromList(utf8.encode(csv));
       await FileSaver.instance.saveFile(
         name: filename,
         bytes: bytes,
@@ -425,6 +426,12 @@ class _TopScreenState extends State<TopScreen> {
       if (result != null && result.files.isNotEmpty) {
         filePath = result.files.single.path;
       }
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Androidのみ対応')));
+      return;
     }
     if (filePath == null) return;
     final file = File(filePath);
@@ -434,7 +441,7 @@ class _TopScreenState extends State<TopScreen> {
     bool hasError = false;
     for (final line in lines) {
       final parts = line.split(',');
-      if (parts.length != 4) {
+      if (parts.length != AppConfig.expectedCsvColumns) {
         hasError = true;
         break;
       }
@@ -705,7 +712,7 @@ class _TopScreenState extends State<TopScreen> {
               padding: const EdgeInsets.all(8.0),
               child: Text(_error!, style: const TextStyle(color: Colors.red)),
             ),
-          // リスト右上にDLボタン（データがある場合のみ）
+          // リスト右上にダウンロードボタン（データがある場合のみ）
           if (_decibelList.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 16.0, top: 8.0),
@@ -715,7 +722,7 @@ class _TopScreenState extends State<TopScreen> {
                   ElevatedButton.icon(
                     onPressed: _downloadCsv,
                     icon: const Icon(Icons.download),
-                    label: const Text('DL'),
+                    label: const Text('ダウンロード'),
                   ),
                 ],
               ),
