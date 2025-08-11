@@ -1,6 +1,9 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:external_path/external_path.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -375,6 +378,105 @@ class _TopScreenState extends State<TopScreen> {
     return logs;
   }
 
+  // CSV生成（ヘッダなし: 日時,デシベル値,緯度,経度）
+  String _generateCsv(List<DecibelData> list) {
+    return list
+        .map((d) => '${d.datetime},${d.decibel},${d.latitude},${d.longitude}')
+        .join('\n');
+  }
+
+  // CSVダウンロード
+  Future<void> _downloadCsv() async {
+    final csv = _generateCsv(_decibelList);
+    if (csv.isEmpty) return;
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final filename = '${AppConfig.csvFileName}_$timestamp';
+    if (Platform.isAndroid) {
+      final downloadPath = await ExternalPath.getExternalStoragePublicDirectory(
+        AppConfig.downloadPath,
+      );
+      final file = File('$downloadPath/$filename.${AppConfig.csvFileExp}');
+      await file.writeAsBytes(Uint8List.fromList(csv.codeUnits));
+    } else {
+      final bytes = Uint8List.fromList(csv.codeUnits);
+      await FileSaver.instance.saveFile(
+        name: filename,
+        bytes: bytes,
+        fileExtension: AppConfig.csvFileExp,
+        mimeType: MimeType.csv,
+      );
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('CSVをダウンロードしました')));
+  }
+
+  // CSVファイルからデータを読み込んでリスト表示
+  Future<void> _pickAndLoadCsv() async {
+    String? filePath;
+    if (Platform.isAndroid) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [AppConfig.csvFileExp],
+        initialDirectory:
+            AppConfig.downloadPathMap[AppConfig.downloadPath] ?? '',
+      );
+      if (result != null && result.files.isNotEmpty) {
+        filePath = result.files.single.path;
+      }
+    }
+    if (filePath == null) return;
+    final file = File(filePath);
+    final csvContent = await file.readAsString();
+    final lines = csvContent.split('\n');
+    List<DecibelData> loadedList = [];
+    bool hasError = false;
+    for (final line in lines) {
+      final parts = line.split(',');
+      if (parts.length != 4) {
+        hasError = true;
+        break;
+      }
+      // 日時: 文字列（空でない）
+      final dt = parts[0].trim();
+      if (dt.isEmpty) {
+        hasError = true;
+        break;
+      }
+      // デシベル値, 緯度, 経度: double型
+      final decibel = double.tryParse(parts[1]);
+      final latitude = double.tryParse(parts[2]);
+      final longitude = double.tryParse(parts[3]);
+      if (decibel == null || latitude == null || longitude == null) {
+        hasError = true;
+        break;
+      }
+      loadedList.add(
+        DecibelData(
+          datetime: dt,
+          decibel: decibel,
+          latitude: latitude,
+          longitude: longitude,
+        ),
+      );
+    }
+    if (hasError || loadedList.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('不正なCSVファイルです')));
+      return;
+    }
+    setState(() {
+      _decibelList = loadedList;
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('CSVからデータを読み込みました')));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -603,6 +705,21 @@ class _TopScreenState extends State<TopScreen> {
               padding: const EdgeInsets.all(8.0),
               child: Text(_error!, style: const TextStyle(color: Colors.red)),
             ),
+          // リスト右上にDLボタン（データがある場合のみ）
+          if (_decibelList.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0, top: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _downloadCsv,
+                    icon: const Icon(Icons.download),
+                    label: const Text('DL'),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               itemCount: _decibelList.length,
@@ -657,6 +774,17 @@ class _TopScreenState extends State<TopScreen> {
             ),
           ),
         ],
+      ),
+      // フッターにアップロードボタン
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: ElevatedButton.icon(
+            onPressed: _pickAndLoadCsv,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('アップロード'),
+          ),
+        ),
       ),
     );
   }
