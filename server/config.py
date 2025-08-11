@@ -17,3 +17,4 @@ LOG_IPV4_ONLY = os.environ.get('GRPC_LOG_IPV4_ONLY', 'false').lower() == 'true'
 
 DECIBEL_LOG_TABLE = 'decibel_log'
 ACCESS_LOG_TABLE = 'access_log'
+GPS_LOG_TABLE = 'gps_log'

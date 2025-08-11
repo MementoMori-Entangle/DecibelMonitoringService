@@ -13,6 +13,7 @@ abstract class GrpcClient {
     required String startDatetime,
     required String endDatetime,
     Duration? timeout,
+    bool useGps = false,
   });
 }
 
@@ -35,6 +36,7 @@ class GrpcAndroidClient implements GrpcClient {
     required String startDatetime,
     required String endDatetime,
     Duration? timeout,
+    bool useGps = false,
   }) async {
     final params = {
       'method': 'getDecibelLog',
@@ -44,6 +46,7 @@ class GrpcAndroidClient implements GrpcClient {
       'startDatetime': startDatetime,
       'endDatetime': endDatetime,
       if (timeout != null) 'timeoutMillis': timeout.inMilliseconds,
+      'useGps': useGps,
     };
     final result = await _channel.invokeMethod<String>('getDecibelLog', params);
     if (result == null) throw Exception('gRPCネイティブクライアントからnullレスポンス');
@@ -54,7 +57,17 @@ class GrpcAndroidClient implements GrpcClient {
             (e) =>
                 DecibelData()
                   ..datetime = e['datetime']
-                  ..decibel = (e['decibel'] as num).toDouble(),
+                  ..decibel = (e['decibel'] as num).toDouble()
+                  ..latitude =
+                      (e['latitude'] is num)
+                          ? (e['latitude'] as num).toDouble()
+                          : double.tryParse(e['latitude']?.toString() ?? '') ??
+                              0.0
+                  ..longitude =
+                      (e['longitude'] is num)
+                          ? (e['longitude'] as num).toDouble()
+                          : double.tryParse(e['longitude']?.toString() ?? '') ??
+                              0.0,
           )
           .toList();
     } else {

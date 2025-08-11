@@ -3,6 +3,7 @@ import sys
 import time
 from concurrent import futures
 from datetime import datetime
+from psycopg2 import sql
 
 import grpc
 import psycopg2
@@ -10,6 +11,7 @@ import psycopg2
 sys.path.append(os.path.join(os.path.dirname(__file__), '../proto'))
 import decibel_logger_pb2
 import decibel_logger_pb2_grpc
+from gps_log_util import fetch_gps_logs, build_gps_dict
 from config import (ACCESS_LOG_TABLE, AUTH_MODE, DB_HOST, DB_NAME, DB_PASS,
                     DB_PORT, DB_USER, DECIBEL_LOG_TABLE, LOG_IPV4_ONLY, PORT,
                     SLEEP_TIME)
@@ -86,30 +88,37 @@ def log_access(ip_addr, access_token, success, reason):
         print(f"[ACCESS LOGGING ERROR] {e}", flush=True)
 
 def fetch_decibel_logs(start_dt=None, end_dt=None):
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
-    with conn.cursor() as cur:
-        query = f"SELECT timestamp, decibel_a FROM {DECIBEL_LOG_TABLE}"
-        params = []
-        if start_dt and end_dt:
-            query += " WHERE timestamp >= %s AND timestamp <= %s"
-            params = [start_dt, end_dt]
-        elif start_dt:
-            query += " WHERE timestamp >= %s"
-            params = [start_dt]
-        elif end_dt:
-            query += " WHERE timestamp <= %s"
-            params = [end_dt]
-        query += " ORDER BY timestamp ASC"
-        cur.execute(query, params)
-        results = cur.fetchall()
-    conn.close()
-    return results
+    conn = None
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS
+        )
+        with conn.cursor() as cur:
+            base_query = sql.SQL("SELECT timestamp, decibel_a FROM {}").format(
+                                                        sql.Identifier(DECIBEL_LOG_TABLE))
+            where_clauses = []
+            params = []
+            if start_dt:
+                where_clauses.append(sql.SQL("timestamp >= %s"))
+                params.append(start_dt)
+            if end_dt:
+                where_clauses.append(sql.SQL("timestamp <= %s"))
+                params.append(end_dt)
+            if where_clauses:
+                base_query = base_query + sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
+            base_query = base_query + sql.SQL(" ORDER BY timestamp ASC")
+            cur.execute(base_query, params)
+            results = cur.fetchall()
+            return results
+    except Exception as e:
+        return []
+    finally:
+        if conn:
+            conn.close()
 
 class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
     def GetDecibelLog(self, request, context):
@@ -168,9 +177,19 @@ class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
         log_access(ip_addr, request.access_token, True, 'OK')
         logs = fetch_decibel_logs(start_dt, end_dt)
         response = decibel_logger_pb2.DecibelLogResponse()
-        for row in logs:
-            dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
-            response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1]))
+        use_gps = hasattr(request, 'use_gps') and request.use_gps
+        if use_gps:
+            gps_logs = fetch_gps_logs(start_dt, end_dt)
+            gps_dict = build_gps_dict(gps_logs)
+            for row in logs:
+                ts = row[0].replace(microsecond=0)
+                lat, lng = gps_dict.get(ts, (0.0, 0.0))
+                dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
+                response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1], latitude=lat, longitude=lng))
+        else:
+            for row in logs:
+                dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
+                response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1]))
         return response
 
 def serve():

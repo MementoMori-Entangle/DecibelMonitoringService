@@ -13,6 +13,10 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  final TextEditingController _pinClusterRadiusController =
+      TextEditingController();
+  double _pinClusterRadius = AppConfig.defaultPinClusterRadiusMeter;
+  bool _showGps = false;
   @override
   void initState() {
     super.initState();
@@ -20,6 +24,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _load();
     _intervalController.text = AppConfig.defaultAutoWatchIntervalSec.toString();
     _thresholdController.text = AppConfig.defaultDecibelThreshold.toString();
+    _pinClusterRadiusController.text =
+        AppConfig.defaultPinClusterRadiusMeter.toString();
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -41,6 +47,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final enabled = await _settings.getAutoWatchEnabled();
     final interval = await _settings.getAutoWatchIntervalSec();
     final threshold = await _settings.getDecibelThreshold();
+    final showGps = await _settings.getShowGps() ?? false;
+    final pinClusterRadius = await _settings.getPinClusterRadiusMeter();
     setState(() {
       _configs = configs;
       _selectedIndex = idx.clamp(0, configs.length - 1);
@@ -49,6 +57,9 @@ class _SettingsPageState extends State<SettingsPage> {
       _intervalController.text = interval.toString();
       _decibelThreshold = threshold;
       _thresholdController.text = threshold.toString();
+      _showGps = showGps;
+      _pinClusterRadius = pinClusterRadius;
+      _pinClusterRadiusController.text = pinClusterRadius.toString();
     });
   }
 
@@ -58,6 +69,8 @@ class _SettingsPageState extends State<SettingsPage> {
     await _settings.setAutoWatchEnabled(_autoWatchEnabled);
     await _settings.setAutoWatchIntervalSec(_autoWatchIntervalSec);
     await _settings.setDecibelThreshold(_decibelThreshold);
+    await _settings.setShowGps(_showGps);
+    await _settings.setPinClusterRadiusMeter(_pinClusterRadius);
     // 監視タスクの登録/解除を即時反映
     await registerAutoWatchTaskIfNeeded();
     if (mounted) Navigator.of(context).pop();
@@ -155,6 +168,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() {
     _intervalController.dispose();
     _thresholdController.dispose();
+    _pinClusterRadiusController.dispose();
     super.dispose();
   }
 
@@ -168,6 +182,15 @@ class _SettingsPageState extends State<SettingsPage> {
           ...List.generate(_configs.length, _buildConfigEditor),
           const SizedBox(height: 24),
           SwitchListTile(
+            title: const Text('GPSデータを表示'),
+            value: _showGps,
+            onChanged: (v) {
+              setState(() {
+                _showGps = v;
+              });
+            },
+          ),
+          SwitchListTile(
             title: const Text('自動監視（バックグラウンド取得&通知）'),
             value: _autoWatchEnabled,
             onChanged: (v) {
@@ -179,6 +202,42 @@ class _SettingsPageState extends State<SettingsPage> {
           Padding(
             padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
             child: TextField(
+              controller: _pinClusterRadiusController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'ピンまとめ距離（メートル）',
+                hintText: '5以上の値を入力（デフォルト: 5）',
+              ),
+              onChanged: (v) {
+                double val =
+                    double.tryParse(v) ??
+                    AppConfig.defaultPinClusterRadiusMeter;
+                if (val < AppConfig.minPinClusterRadiusMeter) {
+                  val = AppConfig.minPinClusterRadiusMeter;
+                }
+                setState(() {
+                  _pinClusterRadius = val;
+                });
+              },
+              onEditingComplete: () {
+                double val =
+                    double.tryParse(_pinClusterRadiusController.text) ??
+                    AppConfig.defaultPinClusterRadiusMeter;
+                if (val < AppConfig.minPinClusterRadiusMeter) {
+                  val = AppConfig.minPinClusterRadiusMeter;
+                  setState(() {
+                    _pinClusterRadius = val;
+                    _pinClusterRadiusController.text = val.toString();
+                  });
+                }
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: TextField(
               controller: _intervalController,
               enabled: _autoWatchEnabled,
               keyboardType: const TextInputType.numberWithOptions(
@@ -186,7 +245,8 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               decoration: const InputDecoration(
                 labelText: '監視間隔（秒）',
-                hintText: '${AppConfig.defaultAutoWatchIntervalSec}以上の整数（最低値: 900秒）',
+                hintText:
+                    '${AppConfig.defaultAutoWatchIntervalSec}以上の整数（最低値: 900秒）',
               ),
               onSubmitted: (v) {
                 final val =

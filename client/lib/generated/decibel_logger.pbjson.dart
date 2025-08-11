@@ -21,6 +21,7 @@ const DecibelLogRequest$json = {
     {'1': 'access_token', '3': 1, '4': 1, '5': 9, '10': 'accessToken'},
     {'1': 'start_datetime', '3': 2, '4': 1, '5': 9, '10': 'startDatetime'},
     {'1': 'end_datetime', '3': 3, '4': 1, '5': 9, '10': 'endDatetime'},
+    {'1': 'use_gps', '3': 4, '4': 1, '5': 8, '10': 'useGps'},
   ],
 };
 
@@ -28,7 +29,7 @@ const DecibelLogRequest$json = {
 final $typed_data.Uint8List decibelLogRequestDescriptor = $convert.base64Decode(
     'ChFEZWNpYmVsTG9nUmVxdWVzdBIhCgxhY2Nlc3NfdG9rZW4YASABKAlSC2FjY2Vzc1Rva2VuEi'
     'UKDnN0YXJ0X2RhdGV0aW1lGAIgASgJUg1zdGFydERhdGV0aW1lEiEKDGVuZF9kYXRldGltZRgD'
-    'IAEoCVILZW5kRGF0ZXRpbWU=');
+    'IAEoCVILZW5kRGF0ZXRpbWUSFwoHdXNlX2dwcxgEIAEoCFIGdXNlR3Bz');
 
 @$core.Deprecated('Use decibelDataDescriptor instead')
 const DecibelData$json = {
@@ -36,13 +37,16 @@ const DecibelData$json = {
   '2': [
     {'1': 'datetime', '3': 1, '4': 1, '5': 9, '10': 'datetime'},
     {'1': 'decibel', '3': 2, '4': 1, '5': 2, '10': 'decibel'},
+    {'1': 'latitude', '3': 3, '4': 1, '5': 1, '10': 'latitude'},
+    {'1': 'longitude', '3': 4, '4': 1, '5': 1, '10': 'longitude'},
   ],
 };
 
 /// Descriptor for `DecibelData`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List decibelDataDescriptor = $convert.base64Decode(
     'CgtEZWNpYmVsRGF0YRIaCghkYXRldGltZRgBIAEoCVIIZGF0ZXRpbWUSGAoHZGVjaWJlbBgCIA'
-    'EoAlIHZGVjaWJlbA==');
+    'EoAlIHZGVjaWJlbBIaCghsYXRpdHVkZRgDIAEoAVIIbGF0aXR1ZGUSHAoJbG9uZ2l0dWRlGAQg'
+    'ASgBUglsb25naXR1ZGU=');
 
 @$core.Deprecated('Use decibelLogResponseDescriptor instead')
 const DecibelLogResponse$json = {

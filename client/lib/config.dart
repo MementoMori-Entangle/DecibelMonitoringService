@@ -1,5 +1,7 @@
 /// アプリのデフォルト設定値を一元管理
 class AppConfig {
+  static const double defaultPinClusterRadiusMeter = 5.0;
+  static const double minPinClusterRadiusMeter = 5.0;
   static const double defaultDecibelThreshold = 70.0;
   static const int defaultAutoWatchIntervalSec =
       900; // 15分(Android WorkManagerの最小値)
