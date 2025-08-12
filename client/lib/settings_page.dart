@@ -44,7 +44,15 @@ class _SettingsPageState extends State<SettingsPage> {
   int _selectedIndex = 0;
 
   Future<void> _load() async {
-    final configs = await _settings.getConfigs();
+    final configs = await _settings.getConfigs(
+      onError: (msg) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(msg)));
+        }
+      },
+    );
     final idx = await _settings.getSelectedConfigIndex();
     final enabled = await _settings.getAutoWatchEnabled();
     final interval = await _settings.getAutoWatchIntervalSec();
@@ -62,6 +70,9 @@ class _SettingsPageState extends State<SettingsPage> {
       _showGps = showGps;
       _pinClusterRadius = pinClusterRadius;
       _pinClusterRadiusController.text = pinClusterRadius.toString();
+      // _obscureAccessTokenListの長さをconfigsに合わせて初期化
+      _obscureAccessTokenList.clear();
+      _obscureAccessTokenList.addAll(List<bool>.filled(configs.length, true));
     });
   }
 

@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,12 +36,56 @@ class ConnectionConfig {
 }
 
 class SettingsService {
-  static final _key = encrypt.Key.fromUtf8(
-    AppConfig.encryptionKey
-        .padRight(AppConfig.encryptionKeyLength, '0')
-        .substring(0, AppConfig.encryptionKeyLength),
-  );
-  static final _encrypter = encrypt.Encrypter(encrypt.AES(_key));
+  static const _saltKey = 'settingsEncryptionSalt';
+  static const _saltLength = 16;
+  static Future<Uint8List> _getOrCreateSalt() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saltStr = prefs.getString(_saltKey);
+    if (saltStr != null) {
+      return base64Decode(saltStr);
+    } else {
+      final salt = Uint8List.fromList(
+        List<int>.generate(
+          _saltLength,
+          (i) => (DateTime.now().millisecondsSinceEpoch >> (i * 2)) & 0xFF,
+        ),
+      );
+      await prefs.setString(_saltKey, base64Encode(salt));
+      return salt;
+    }
+  }
+
+  static Future<encrypt.Key> _deriveKey(
+    String passphrase,
+    Uint8List salt,
+    int length,
+  ) async {
+    final pbkdf2 = Pbkdf2(
+      macAlgorithm: Hmac.sha256(),
+      iterations: 10000,
+      bits: length * 8,
+    );
+    final secretKey = await pbkdf2.deriveKey(
+      secretKey: SecretKey(utf8.encode(passphrase)),
+      nonce: salt,
+    );
+    final keyBytes = await secretKey.extractBytes();
+    return encrypt.Key(Uint8List.fromList(keyBytes));
+  }
+
+  encrypt.Encrypter? _encrypter;
+  Future<void> _initEncrypter() async {
+    if (_encrypter != null) return;
+    if (AppConfig.encryptionKey.isEmpty) return;
+    final salt = await _getOrCreateSalt();
+    final key = await _deriveKey(
+      AppConfig.encryptionKey,
+      salt,
+      AppConfig.encryptionKeyLength,
+    );
+    _encrypter = encrypt.Encrypter(encrypt.AES(key));
+  }
+
   static const _pinClusterRadiusKey = 'pinClusterRadiusMeter';
 
   Future<double> getPinClusterRadiusMeter() async {
@@ -109,7 +155,10 @@ class SettingsService {
   static const _configsKey = 'connectionConfigs';
   static const _selectedIndexKey = 'selectedConfigIndex';
 
-  Future<List<ConnectionConfig>> getConfigs() async {
+  Future<List<ConnectionConfig>> getConfigs({
+    void Function(String)? onError,
+  }) async {
+    await _initEncrypter();
     final prefs = await SharedPreferences.getInstance();
     final str = prefs.getString(_configsKey);
     if (str == null) {
@@ -123,37 +172,49 @@ class SettingsService {
         ),
       ];
     }
-    if (AppConfig.encryptionKey.isEmpty) {
-      // 暗号化キー未設定なら平文
-      final List<dynamic> list = json.decode(str);
-      return list.map((e) => ConnectionConfig.fromJson(e)).toList();
+    try {
+      if (AppConfig.encryptionKey.isEmpty) {
+        // 暗号化キー未設定なら平文
+        final List<dynamic> list = json.decode(str);
+        return list.map((e) => ConnectionConfig.fromJson(e)).toList();
+      }
+    } catch (e) {
+      // 暗号化設定情報を平文として処理しようとする場合を考慮
+      if (onError != null) {
+        onError('設定情報の読み込みに失敗しました。保存データをご確認ください。');
+      }
+      return [];
     }
     try {
       final parts = str.split(':');
       if (parts.length == 2) {
         final iv = encrypt.IV.fromBase64(parts[0]);
         final encrypted = parts[1];
-        final decrypted = _encrypter.decrypt64(encrypted, iv: iv);
+        final decrypted = _encrypter!.decrypt64(encrypted, iv: iv);
         final List<dynamic> list = json.decode(decrypted);
         return list.map((e) => ConnectionConfig.fromJson(e)).toList();
       } else {
         return [];
       }
     } catch (e) {
-      // 復号失敗時は空リスト
+      // 復号失敗時は空リスト＋エラーメッセージ通知
+      if (onError != null) {
+        onError('設定情報の復号に失敗しました。暗号化キーや保存データをご確認ください。');
+      }
       return [];
     }
   }
 
   Future<void> saveConfigs(List<ConnectionConfig> configs) async {
+    await _initEncrypter();
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = json.encode(configs.map((e) => e.toJson()).toList());
-    if (AppConfig.encryptionKey.isEmpty) {
+    if (AppConfig.encryptionKey.isEmpty || _encrypter == null) {
       // 暗号化キー未設定なら平文保存
       await prefs.setString(_configsKey, jsonStr);
     } else {
       final iv = encrypt.IV.fromSecureRandom(16);
-      final encrypted = _encrypter.encrypt(jsonStr, iv: iv);
+      final encrypted = _encrypter!.encrypt(jsonStr, iv: iv);
       final saveValue = '${iv.base64}:${encrypted.base64}';
       await prefs.setString(_configsKey, saveValue);
     }

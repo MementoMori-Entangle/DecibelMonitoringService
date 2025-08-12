@@ -18,10 +18,8 @@ class AppConfig {
   static String get encryptionKey {
     const defaultKey = ''; // 暗号化キー空は平文処理
     final envKey = const String.fromEnvironment('DECIBEL_ENCRYPTION_KEY');
-    if (envKey.isNotEmpty && envKey.length >= 16) {
-      return envKey
-          .padRight(encryptionKeyLength, '0')
-          .substring(0, encryptionKeyLength);
+    if (envKey.isNotEmpty && envKey.length >= encryptionKeyLength) {
+      return envKey.substring(0, encryptionKeyLength);
     }
     return defaultKey;
   }
