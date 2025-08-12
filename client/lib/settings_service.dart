@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config.dart';
@@ -33,6 +34,12 @@ class ConnectionConfig {
 }
 
 class SettingsService {
+  static final _key = encrypt.Key.fromUtf8(
+    AppConfig.encryptionKey
+        .padRight(AppConfig.encryptionKeyLength, '0')
+        .substring(0, AppConfig.encryptionKeyLength),
+  );
+  static final _encrypter = encrypt.Encrypter(encrypt.AES(_key));
   static const _pinClusterRadiusKey = 'pinClusterRadiusMeter';
 
   Future<double> getPinClusterRadiusMeter() async {
@@ -104,8 +111,8 @@ class SettingsService {
 
   Future<List<ConnectionConfig>> getConfigs() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_configsKey);
-    if (jsonStr == null) {
+    final str = prefs.getString(_configsKey);
+    if (str == null) {
       // 初回はデフォルト1件
       return [
         ConnectionConfig(
@@ -116,14 +123,40 @@ class SettingsService {
         ),
       ];
     }
-    final List<dynamic> list = json.decode(jsonStr);
-    return list.map((e) => ConnectionConfig.fromJson(e)).toList();
+    if (AppConfig.encryptionKey.isEmpty) {
+      // 暗号化キー未設定なら平文
+      final List<dynamic> list = json.decode(str);
+      return list.map((e) => ConnectionConfig.fromJson(e)).toList();
+    }
+    try {
+      final parts = str.split(':');
+      if (parts.length == 2) {
+        final iv = encrypt.IV.fromBase64(parts[0]);
+        final encrypted = parts[1];
+        final decrypted = _encrypter.decrypt64(encrypted, iv: iv);
+        final List<dynamic> list = json.decode(decrypted);
+        return list.map((e) => ConnectionConfig.fromJson(e)).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      // 復号失敗時は空リスト
+      return [];
+    }
   }
 
   Future<void> saveConfigs(List<ConnectionConfig> configs) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = json.encode(configs.map((e) => e.toJson()).toList());
-    await prefs.setString(_configsKey, jsonStr);
+    if (AppConfig.encryptionKey.isEmpty) {
+      // 暗号化キー未設定なら平文保存
+      await prefs.setString(_configsKey, jsonStr);
+    } else {
+      final iv = encrypt.IV.fromSecureRandom(16);
+      final encrypted = _encrypter.encrypt(jsonStr, iv: iv);
+      final saveValue = '${iv.base64}:${encrypted.base64}';
+      await prefs.setString(_configsKey, saveValue);
+    }
   }
 
   Future<int> getSelectedConfigIndex() async {

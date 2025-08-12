@@ -13,4 +13,16 @@ class AppConfig {
   static const String title = 'Decibel Log Viewer';
   static const String dateTimeFormat = 'yyyy/MM/dd HH:mm:ss';
   static const String inputCalendarFormat = 'yyyy/MM/dd HH:mm';
+  // 暗号化キー（32文字=256bit）: 環境変数 DECIBEL_ENCRYPTION_KEY から取得
+  static const int encryptionKeyLength = 32;
+  static String get encryptionKey {
+    const defaultKey = ''; // 暗号化キー空は平文処理
+    final envKey = const String.fromEnvironment('DECIBEL_ENCRYPTION_KEY');
+    if (envKey.isNotEmpty && envKey.length >= 16) {
+      return envKey
+          .padRight(encryptionKeyLength, '0')
+          .substring(0, encryptionKeyLength);
+    }
+    return defaultKey;
+  }
 }
