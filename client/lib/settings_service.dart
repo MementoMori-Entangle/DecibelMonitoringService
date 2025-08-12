@@ -49,7 +49,7 @@ class SettingsService {
           _saltLength,
           (i) => (DateTime.now().millisecondsSinceEpoch >> (i * 2)) & 0xFF,
         ),
-      );
+      final salt = await Cryptography.instance.randomBytes(_saltLength);
       await prefs.setString(_saltKey, base64Encode(salt));
       return salt;
     }
