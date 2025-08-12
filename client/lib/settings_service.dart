@@ -179,7 +179,8 @@ class SettingsService {
         return list.map((e) => ConnectionConfig.fromJson(e)).toList();
       }
     } catch (e) {
-      // 暗号化設定情報を平文として処理しようとする場合を考慮
+    } on FormatException catch (e) {
+      // データが暗号化されている場合、平文としてJSONデコードするとFormatExceptionが発生する
       if (onError != null) {
         onError('設定情報の読み込みに失敗しました。保存データをご確認ください。');
       }
