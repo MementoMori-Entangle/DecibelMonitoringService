@@ -13,4 +13,12 @@ class AppConfig {
   static const String title = 'Decibel Log Viewer';
   static const String dateTimeFormat = 'yyyy/MM/dd HH:mm:ss';
   static const String inputCalendarFormat = 'yyyy/MM/dd HH:mm';
+  static const int expectedCsvColumns = 4;
+  static const String csvFileName = 'decibel_data';
+  static const String csvFileExp = 'csv';
+  // AndroidのDownloadディレクトリ
+  static const String downloadPath = 'Download';
+  static const Map<String, String> downloadPathMap = {
+    'Download': '/storage/emulated/0/Download',
+  };
 }
