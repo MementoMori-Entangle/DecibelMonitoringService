@@ -21,4 +21,15 @@ class AppConfig {
   static const Map<String, String> downloadPathMap = {
     'Download': '/storage/emulated/0/Download',
   };
+
+  // 暗号化キー（32文字=256bit）: 環境変数 DECIBEL_ENCRYPTION_KEY から取得
+  static const int encryptionKeyLength = 32;
+  static String get encryptionKey {
+    const defaultKey = ''; // 暗号化キー空は平文処理
+    final envKey = const String.fromEnvironment('DECIBEL_ENCRYPTION_KEY');
+    if (envKey.isNotEmpty && envKey.length >= encryptionKeyLength) {
+      return envKey.substring(0, encryptionKeyLength);
+    }
+    return defaultKey;
+  }
 }

@@ -13,6 +13,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  // 各接続先ごとにアクセストークン表示/非表示状態を管理
+  final List<bool> _obscureAccessTokenList = [];
   final TextEditingController _pinClusterRadiusController =
       TextEditingController();
   double _pinClusterRadius = AppConfig.defaultPinClusterRadiusMeter;
@@ -42,7 +44,15 @@ class _SettingsPageState extends State<SettingsPage> {
   int _selectedIndex = 0;
 
   Future<void> _load() async {
-    final configs = await _settings.getConfigs();
+    final configs = await _settings.getConfigs(
+      onError: (msg) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(msg)));
+        }
+      },
+    );
     final idx = await _settings.getSelectedConfigIndex();
     final enabled = await _settings.getAutoWatchEnabled();
     final interval = await _settings.getAutoWatchIntervalSec();
@@ -60,6 +70,9 @@ class _SettingsPageState extends State<SettingsPage> {
       _showGps = showGps;
       _pinClusterRadius = pinClusterRadius;
       _pinClusterRadiusController.text = pinClusterRadius.toString();
+      // _obscureAccessTokenListの長さをconfigsに合わせて初期化
+      _obscureAccessTokenList.clear();
+      _obscureAccessTokenList.addAll(List<bool>.filled(configs.length, true));
     });
   }
 
@@ -87,6 +100,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
       _selectedIndex = _configs.length - 1;
+      _obscureAccessTokenList.add(true);
     });
   }
 
@@ -94,6 +108,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_configs.length <= 1) return;
     setState(() {
       _configs.removeAt(idx);
+      _obscureAccessTokenList.removeAt(idx);
       if (_selectedIndex >= _configs.length) {
         _selectedIndex = _configs.length - 1;
       }
@@ -143,8 +158,31 @@ class _SettingsPageState extends State<SettingsPage> {
               onChanged: (v) => config.port = int.tryParse(v) ?? 50051,
             ),
             TextField(
-              decoration: const InputDecoration(labelText: 'アクセストークン'),
               controller: TextEditingController(text: config.accessToken),
+              obscureText:
+                  _obscureAccessTokenList.length > idx
+                      ? _obscureAccessTokenList[idx]
+                      : true,
+              decoration: InputDecoration(
+                labelText: 'アクセストークン',
+                hintText: 'APIアクセストークンを入力',
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureAccessTokenList.length > idx &&
+                            _obscureAccessTokenList[idx]
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      if (_obscureAccessTokenList.length > idx) {
+                        _obscureAccessTokenList[idx] =
+                            !_obscureAccessTokenList[idx];
+                      }
+                    });
+                  },
+                ),
+              ),
               onChanged: (v) => config.accessToken = v,
             ),
             TextField(
