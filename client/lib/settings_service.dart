@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
@@ -45,11 +46,8 @@ class SettingsService {
       return base64Decode(saltStr);
     } else {
       final salt = Uint8List.fromList(
-        List<int>.generate(
-          _saltLength,
-          (i) => (DateTime.now().millisecondsSinceEpoch >> (i * 2)) & 0xFF,
-        ),
-      final salt = await Cryptography.instance.randomBytes(_saltLength);
+        List<int>.generate(_saltLength, (i) => Random.secure().nextInt(256)),
+      );
       await prefs.setString(_saltKey, base64Encode(salt));
       return salt;
     }
@@ -179,8 +177,7 @@ class SettingsService {
         return list.map((e) => ConnectionConfig.fromJson(e)).toList();
       }
     } catch (e) {
-    } on FormatException catch (e) {
-      // データが暗号化されている場合、平文としてJSONデコードするとFormatExceptionが発生する
+      // 暗号化設定情報を平文として処理しようとする場合を考慮
       if (onError != null) {
         onError('設定情報の読み込みに失敗しました。保存データをご確認ください。');
       }
