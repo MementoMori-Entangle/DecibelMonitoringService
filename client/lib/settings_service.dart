@@ -190,6 +190,12 @@ class SettingsService {
       if (parts.length == 2) {
         final iv = encrypt.IV.fromBase64(parts[0]);
         final encrypted = parts[1];
+        if (_encrypter == null) {
+          if (onError != null) {
+            onError('暗号化キーが未設定または不正です。設定情報の復号に失敗しました。');
+          }
+          return [];
+        }
         final decrypted = _encrypter!.decrypt64(encrypted, iv: iv);
         final List<dynamic> list = json.decode(decrypted);
         return list.map((e) => ConnectionConfig.fromJson(e)).toList();
