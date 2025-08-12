@@ -18,6 +18,13 @@
 　2.5. グラフ画面(メイン画面で取得したデシベル値リストをグラフ表示)  
 　2.6. バックグラウンド(へ)
 
+# クライアントの設定情報暗号化対応
+暗号化する場合は、ビルド時に環境変数で  
+--dart-define=DECIBEL_ENCRYPTION_KEY=32文字の英数記号を  
+設定してください。  
+設定ファイルで32=256bitにしていますが、  
+セキュリティ強度が下がりますが、16=128bit、24=192bitも可能です。
+
 # GPSデータ連動における、外部DBテーブル参照設定
 GPSデータはhttps://github.com/MementoMori-Entangle/GPSOutputLogger  
 のサービスで登録されたDBデータを使用している関係上、外部DBテーブルを参照する必要があります。  
@@ -280,7 +287,7 @@ After=postgresql@15-main.service
 Requires=postgresql@15-main.service  
 で制御してください。
 
-# ライセンス 2025年7月31日時点
+# ライセンス 2025年8月13日時点
 ・server  
 python
 | パッケージ名       | ライセンス      |
@@ -323,6 +330,11 @@ Dart/Flutter
 | workmanager                 | ^0.7.0      | MIT          |
 | flutter_local_notifications | ^19.4.0     | BSD-3-Clause |
 | permission_handler          | ^11.3.1     | BSD-3-Clause |
+| file_saver                  | ^0.3.1      | MIT          |
+| external_path               | ^2.2.0      | MIT          |
+| file_picker                 | ^10.2.4     | MIT          |
+| encrypt                     | ^5.0.3      | MIT          |
+| cryptography                | ^2.7.0      | MIT          |
 
 Android/Java(kotlin)
 | パッケージ名                              | バージョン   | ライセンス      |
