@@ -231,7 +231,6 @@ class _SettingsPageState extends State<SettingsPage> {
         'autoWatchIntervalSec': _autoWatchIntervalSec,
       };
       final jsonString = json.encode(exportData);
-      if (jsonString.isEmpty) return;
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final filename = '${AppConfig.exportFileName}_$timestamp';
       if (Platform.isAndroid) {
