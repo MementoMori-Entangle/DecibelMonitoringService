@@ -1,4 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:external_path/external_path.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'config.dart';
@@ -210,10 +218,133 @@ class _SettingsPageState extends State<SettingsPage> {
     super.dispose();
   }
 
+  Future<void> _exportSettings() async {
+    try {
+      final configs = await _settings.getConfigs();
+      final exportData = {
+        'connectionConfigs': configs.map((e) => e.toJson()).toList(),
+        'selectedConfigIndex': _selectedIndex,
+        'pinClusterRadiusMeter': _pinClusterRadius,
+        'showGps': _showGps,
+        'decibelThreshold': _decibelThreshold,
+        'autoWatchEnabled': _autoWatchEnabled,
+        'autoWatchIntervalSec': _autoWatchIntervalSec,
+      };
+      final jsonString = json.encode(exportData);
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final filename = '${AppConfig.exportFileName}_$timestamp';
+      if (Platform.isAndroid) {
+        final downloadPath =
+            await ExternalPath.getExternalStoragePublicDirectory(
+              AppConfig.downloadPath,
+            );
+        final file = File('$downloadPath/$filename.${AppConfig.jsonFileExp}');
+        await file.writeAsString(jsonString, encoding: utf8);
+      } else {
+        final bytes = Uint8List.fromList(utf8.encode(jsonString));
+        await FileSaver.instance.saveFile(
+          name: filename,
+          bytes: bytes,
+          fileExtension: AppConfig.jsonFileExp,
+          mimeType: MimeType.json,
+        );
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('設定情報をエクスポートしました')));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('エクスポート失敗')));
+      }
+    }
+  }
+
+  Future<void> _importSettings() async {
+    try {
+      // ファイル選択
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [AppConfig.jsonFileExp],
+        initialDirectory:
+            AppConfig.downloadPathMap[AppConfig.downloadPath] ?? '',
+      );
+      if (result == null || result.files.single.path == null) {
+        return;
+      }
+      final file = File(result.files.single.path!);
+      final jsonString = await file.readAsString();
+      final data = json.decode(jsonString);
+      // 各値を個別に保存
+      if (data['connectionConfigs'] != null) {
+        // 平文JSONからリスト復元
+        final configs =
+            (data['connectionConfigs'] as List)
+                .map((e) => ConnectionConfig.fromJson(e))
+                .toList();
+        // 保存（暗号化有効時は暗号化される）
+        await _settings.saveConfigs(configs);
+      }
+      if (data['selectedConfigIndex'] != null) {
+        await _settings.setSelectedConfigIndex(data['selectedConfigIndex']);
+      }
+      if (data['pinClusterRadiusMeter'] != null) {
+        await _settings.setPinClusterRadiusMeter(
+          (data['pinClusterRadiusMeter'] as num).toDouble(),
+        );
+      }
+      if (data['showGps'] != null) {
+        await _settings.setShowGps(data['showGps'] as bool);
+      }
+      if (data['decibelThreshold'] != null) {
+        await _settings.setDecibelThreshold(
+          (data['decibelThreshold'] as num).toDouble(),
+        );
+      }
+      if (data['autoWatchEnabled'] != null) {
+        await _settings.setAutoWatchEnabled(data['autoWatchEnabled'] as bool);
+      }
+      if (data['autoWatchIntervalSec'] != null) {
+        await _settings.setAutoWatchIntervalSec(
+          data['autoWatchIntervalSec'] as int,
+        );
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('設定情報をインポートしました')));
+      }
+      // 再読込
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('インポート失敗')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('接続先設定')),
+      appBar: AppBar(
+        title: const Text('接続先設定'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_upload),
+            tooltip: '設定インポート',
+            onPressed: _importSettings,
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_download),
+            tooltip: '設定エクスポート',
+            onPressed: _exportSettings,
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

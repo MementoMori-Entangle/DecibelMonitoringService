@@ -16,6 +16,8 @@ class AppConfig {
   static const int expectedCsvColumns = 4;
   static const String csvFileName = 'decibel_data';
   static const String csvFileExp = 'csv';
+  static const String exportFileName = 'settings';
+  static const String jsonFileExp = 'json';
   // AndroidのDownloadディレクトリ
   static const String downloadPath = 'Download';
   static const Map<String, String> downloadPathMap = {
