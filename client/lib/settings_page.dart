@@ -239,7 +239,7 @@ class _SettingsPageState extends State<SettingsPage> {
               AppConfig.downloadPath,
             );
         final file = File('$downloadPath/$filename.${AppConfig.jsonFileExp}');
-        await file.writeAsBytes(Uint8List.fromList(utf8.encode(jsonString)));
+        await file.writeAsString(jsonString, encoding: utf8);
       } else {
         final bytes = Uint8List.fromList(utf8.encode(jsonString));
         await FileSaver.instance.saveFile(
