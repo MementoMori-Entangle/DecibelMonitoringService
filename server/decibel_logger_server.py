@@ -33,15 +33,27 @@ def is_valid_token(token):
                     id SERIAL PRIMARY KEY,
                     token VARCHAR(128) UNIQUE NOT NULL,
                     description VARCHAR(256),
-                    enabled BOOLEAN DEFAULT TRUE
+                    enabled BOOLEAN DEFAULT TRUE,
+                    valid_from TIMESTAMP,
+                    valid_until TIMESTAMP
                 )
             """)
             cur.execute(
-                "SELECT enabled FROM access_tokens WHERE token = %s", (token,)
+                "SELECT enabled, valid_from, valid_until FROM access_tokens WHERE token = %s", (token,)
             )
             row = cur.fetchone()
         conn.close()
-        return bool(row) and row[0] is True
+        if not row:
+            return False
+        enabled, valid_from, valid_until = row
+        if not enabled:
+            return False
+        now = datetime.now()
+        if valid_from and now < valid_from:
+            return False
+        if valid_until and now > valid_until:
+            return False
+        return True
     except Exception as e:
         print(f"[TOKEN CHECK ERROR] {e}", flush=True)
         return False

@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, Form, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import Boolean, Column, Integer, String, create_engine
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -22,6 +22,8 @@ class AccessToken(Base):
     token = Column(String(128), unique=True, index=True, nullable=False)
     description = Column(String(256), default="")
     enabled = Column(Boolean, default=True)
+    valid_from = Column(DateTime, nullable=True)
+    valid_until = Column(DateTime, nullable=True)
 
 Base.metadata.create_all(bind=engine)
 
@@ -48,10 +50,21 @@ async def index(request: Request, db: Session = Depends(lambda: SessionLocal()))
 
 # トークン追加
 @app.post("/add")
-async def add_token(request: Request, token: str = Form(...), description: str = Form(""), db: Session = Depends(lambda: SessionLocal())):
+async def add_token(request: Request, token: str = Form(...), description: str = Form(""), valid_from: str = Form(None), valid_until: str = Form(None), db: Session = Depends(lambda: SessionLocal())):
+    from datetime import datetime
     if not token:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-    db.add(AccessToken(token=token, description=description))
+    valid_from_dt = None
+    valid_until_dt = None
+    dt_format = "%Y-%m-%dT%H:%M"  # HTML5 datetime-local形式
+    try:
+        if valid_from:
+            valid_from_dt = datetime.strptime(valid_from, dt_format)
+        if valid_until:
+            valid_until_dt = datetime.strptime(valid_until, dt_format)
+    except Exception:
+        pass
+    db.add(AccessToken(token=token, description=description, valid_from=valid_from_dt, valid_until=valid_until_dt))
     db.commit()
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
