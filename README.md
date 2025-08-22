@@ -156,6 +156,11 @@ CREATE TABLE IF NOT EXISTS access_tokens (
 INSERT INTO access_tokens (token, description, enabled)  
 VALUES('12345', 'テスト', true);
 
+有効期限追加  
+ALTER TABLE access_tokens  
+  ADD COLUMN IF NOT EXISTS valid_from TIMESTAMP,  
+  ADD COLUMN IF NOT EXISTS valid_until TIMESTAMP;
+
 権限確認  
 SELECT tablename, tableowner  
 FROM pg_tables  
