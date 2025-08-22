@@ -11,11 +11,17 @@
         <form method="post" action="/add" class="add-form">
             <input type="text" name="token" placeholder="新規トークン" required>
             <input type="text" name="description" placeholder="説明">
+            <label>有効開始:
+                <input type="datetime-local" name="valid_from">
+            </label>
+            <label>有効終了:
+                <input type="datetime-local" name="valid_until">
+            </label>
             <button type="submit">追加</button>
         </form>
         <table>
             <thead>
-                <tr><th>ID</th><th>トークン</th><th>説明</th><th>有効</th><th>操作</th></tr>
+                <tr><th>ID</th><th>トークン</th><th>説明</th><th>有効</th><th>開始</th><th>終了</th><th>操作</th></tr>
             </thead>
             <tbody>
                 {% for t in tokens %}
@@ -24,6 +30,8 @@
                     <td>{{ t.token }}</td>
                     <td>{{ t.description }}</td>
                     <td>{{ '✅' if t.enabled else '❌' }}</td>
+                    <td>{{ t.valid_from if t.valid_from else '' }}</td>
+                    <td>{{ t.valid_until if t.valid_until else '' }}</td>
                     <td>
                         <form method="post" action="/toggle/{{ t.id }}" style="display:inline;"><button type="submit">切替</button></form>
                         <form method="post" action="/delete/{{ t.id }}" style="display:inline;"><button type="submit" onclick="return confirm('削除しますか?');">削除</button></form>
