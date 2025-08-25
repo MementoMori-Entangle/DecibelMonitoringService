@@ -1,0 +1,9 @@
+# ライセンスファイル
+# library,version,license,file
+io.grpc:grpc-okhttp,1.63.0,Apache-2.0,
+io.grpc:grpc-protobuf,1.63.0,Apache-2.0,
+io.grpc:grpc-stub,1.63.0,Apache-2.0,
+javax.annotation:javax.annotation-api,1.3.2,CDDL/GPL-2.0,GPL-2.0
+org.bouncycastle:bcprov-jdk18on,1.78.1,MIT,
+org.bouncycastle:bcpkix-jdk18on,1.78.1,MIT,
+com.android.tools:desugar_jdk_libs,2.1.4,Apache-2.0,
