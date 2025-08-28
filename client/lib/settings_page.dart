@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'config.dart';
 import 'main.dart' show registerAutoWatchTaskIfNeeded;
 import 'settings_service.dart';
+import 'help_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -342,6 +343,15 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: const Icon(Icons.file_download),
             tooltip: '設定エクスポート',
             onPressed: _exportSettings,
+          ),
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'ヘルプ',
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (context) => const HelpPage()));
+            },
           ),
         ],
       ),

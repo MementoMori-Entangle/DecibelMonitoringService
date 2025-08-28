@@ -1,0 +1,3 @@
+# ライセンスファイル
+# library,version,license,file
+com.entangle.client,1.0.1,GPL-3.0,
