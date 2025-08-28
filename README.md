@@ -30,6 +30,12 @@ GPSデータはhttps://github.com/MementoMori-Entangle/GPSOutputLogger
 のサービスで登録されたDBデータを使用している関係上、外部DBテーブルを参照する必要があります。  
 PostgreSQLで外部参照できるよう設定が必要です。
 
+# AndroidのOSSライセンス
+Androidアプリ内のOSSライセンス表示で  
+Android固有のライセンスは手動管理となっています。  
+(自動生成はFlutterとの相性問題で見送り)  
+Flutterはflutter_oss_licensesで自動生成しています。
+
 # クライアントアプリについて
 server内にあるdecibel_client_app.pyは簡易確認用です。  
 実際のクライアントはclient内のFlutter(Android)アプリです。
@@ -292,7 +298,7 @@ After=postgresql@15-main.service
 Requires=postgresql@15-main.service  
 で制御してください。
 
-# ライセンス 2025年8月13日時点
+# ライセンス 2025年8月28日時点
 ・server  
 python
 | パッケージ名       | ライセンス      |
@@ -340,6 +346,7 @@ Dart/Flutter
 | file_picker                 | ^10.2.4     | MIT          |
 | encrypt                     | ^5.0.3      | MIT          |
 | cryptography                | ^2.7.0      | MIT          |
+| flutter_oss_licenses        | ^3.0.4      | MIT          |
 
 Android/Java(kotlin)
 | パッケージ名                              | バージョン   | ライセンス      |
