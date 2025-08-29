@@ -64,7 +64,7 @@ class LicenseListPage extends StatelessWidget {
                   String licenseText = '';
                   String filePath = '';
                   if (fileName.isNotEmpty) {
-                    filePath = 'assets/licenses/$fileName';
+                    filePath = 'assets/licenses/$fileName.txt';
                   } else {
                     filePath = 'assets/licenses/$licenseName.txt';
                   }
