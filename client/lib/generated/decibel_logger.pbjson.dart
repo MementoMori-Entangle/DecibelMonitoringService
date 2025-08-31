@@ -22,6 +22,7 @@ const DecibelLogRequest$json = {
     {'1': 'start_datetime', '3': 2, '4': 1, '5': 9, '10': 'startDatetime'},
     {'1': 'end_datetime', '3': 3, '4': 1, '5': 9, '10': 'endDatetime'},
     {'1': 'use_gps', '3': 4, '4': 1, '5': 8, '10': 'useGps'},
+    {'1': 'use_apt', '3': 5, '4': 1, '5': 8, '10': 'useApt'},
   ],
 };
 
@@ -29,7 +30,8 @@ const DecibelLogRequest$json = {
 final $typed_data.Uint8List decibelLogRequestDescriptor = $convert.base64Decode(
     'ChFEZWNpYmVsTG9nUmVxdWVzdBIhCgxhY2Nlc3NfdG9rZW4YASABKAlSC2FjY2Vzc1Rva2VuEi'
     'UKDnN0YXJ0X2RhdGV0aW1lGAIgASgJUg1zdGFydERhdGV0aW1lEiEKDGVuZF9kYXRldGltZRgD'
-    'IAEoCVILZW5kRGF0ZXRpbWUSFwoHdXNlX2dwcxgEIAEoCFIGdXNlR3Bz');
+    'IAEoCVILZW5kRGF0ZXRpbWUSFwoHdXNlX2dwcxgEIAEoCFIGdXNlR3BzEhcKB3VzZV9hcHQYBS'
+    'ABKAhSBnVzZUFwdA==');
 
 @$core.Deprecated('Use decibelDataDescriptor instead')
 const DecibelData$json = {
@@ -39,6 +41,9 @@ const DecibelData$json = {
     {'1': 'decibel', '3': 2, '4': 1, '5': 2, '10': 'decibel'},
     {'1': 'latitude', '3': 3, '4': 1, '5': 1, '10': 'latitude'},
     {'1': 'longitude', '3': 4, '4': 1, '5': 1, '10': 'longitude'},
+    {'1': 'altitude', '3': 5, '4': 1, '5': 2, '10': 'altitude'},
+    {'1': 'pressure', '3': 6, '4': 1, '5': 2, '10': 'pressure'},
+    {'1': 'temperature', '3': 7, '4': 1, '5': 2, '10': 'temperature'},
   ],
 };
 
@@ -46,7 +51,8 @@ const DecibelData$json = {
 final $typed_data.Uint8List decibelDataDescriptor = $convert.base64Decode(
     'CgtEZWNpYmVsRGF0YRIaCghkYXRldGltZRgBIAEoCVIIZGF0ZXRpbWUSGAoHZGVjaWJlbBgCIA'
     'EoAlIHZGVjaWJlbBIaCghsYXRpdHVkZRgDIAEoAVIIbGF0aXR1ZGUSHAoJbG9uZ2l0dWRlGAQg'
-    'ASgBUglsb25naXR1ZGU=');
+    'ASgBUglsb25naXR1ZGUSGgoIYWx0aXR1ZGUYBSABKAJSCGFsdGl0dWRlEhoKCHByZXNzdXJlGA'
+    'YgASgCUghwcmVzc3VyZRIgCgt0ZW1wZXJhdHVyZRgHIAEoAlILdGVtcGVyYXR1cmU=');
 
 @$core.Deprecated('Use decibelLogResponseDescriptor instead')
 const DecibelLogResponse$json = {

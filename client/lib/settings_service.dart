@@ -115,6 +115,17 @@ class SettingsService {
     await prefs.setBool(_showGpsKey, value);
   }
 
+  static const _showAptKey = 'showApt';
+  Future<bool?> getShowApt() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_showAptKey);
+  }
+
+  Future<void> setShowApt(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showAptKey, value);
+  }
+
   static const _decibelThresholdKey = 'decibelThreshold';
   Future<double> getDecibelThreshold() async {
     final prefs = await SharedPreferences.getInstance();

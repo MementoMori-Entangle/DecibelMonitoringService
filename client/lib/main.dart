@@ -48,6 +48,8 @@ Future<void> runDecibelMonitorTask() async {
     return;
   }
   final config = configs[idx.clamp(0, configs.length - 1)];
+  final showGps = await settings.getShowGps() ?? false;
+  final showApt = await settings.getShowApt() ?? false;
   final threshold = await settings.getDecibelThreshold();
   // 監視間隔前～現在のデータ取得
   final now = DateTime.now();
@@ -69,6 +71,8 @@ Future<void> runDecibelMonitorTask() async {
       startDatetime: DateFormat(AppConfig.dateTimeFormat).format(start),
       endDatetime: DateFormat(AppConfig.dateTimeFormat).format(now),
       timeout: Duration(milliseconds: config.timeoutMillis),
+      useGps: showGps,
+      useApt: showApt,
     );
     if (kDebugMode) log('[BG] gRPCレスポンス件数: ${logs.length}');
     // 閾値超えがあれば通知
@@ -236,6 +240,7 @@ class _TopScreenState extends State<TopScreen> {
   DateTime? _endDate;
   List<DecibelData> _decibelList = [];
   bool _showGps = false;
+  bool _showApt = false;
   ConnectionConfig? _selectedConfig;
 
   // デシベル範囲用
@@ -256,6 +261,7 @@ class _TopScreenState extends State<TopScreen> {
     _loadSelectedConfig();
     _loadThreshold();
     _loadShowGps();
+    _loadShowApt();
     final now = DateTime.now();
     _startDate = DateTime(now.year, now.month, now.day);
     _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
@@ -268,6 +274,15 @@ class _TopScreenState extends State<TopScreen> {
     if (mounted) {
       setState(() {
         _showGps = s ?? false;
+      });
+    }
+  }
+
+  Future<void> _loadShowApt() async {
+    final s = await SettingsService().getShowApt();
+    if (mounted) {
+      setState(() {
+        _showApt = s ?? false;
       });
     }
   }
@@ -334,6 +349,7 @@ class _TopScreenState extends State<TopScreen> {
         endDatetime: DateFormat(AppConfig.dateTimeFormat).format(_endDate!),
         timeout: Duration(milliseconds: _selectedConfig!.timeoutMillis),
         useGps: _showGps,
+        useApt: _showApt,
       );
       // デシベル範囲で絞り込み
       List<DecibelData> filtered = _filterLogsByDecibelRange(
@@ -379,10 +395,13 @@ class _TopScreenState extends State<TopScreen> {
     return logs;
   }
 
-  // CSV生成（ヘッダなし: 日時,デシベル値,緯度,経度）
+  // CSV生成（ヘッダなし: 日時,デシベル値,緯度,経度,高度,気圧,気温）
   String _generateCsv(List<DecibelData> list) {
     return list
-        .map((d) => '${d.datetime},${d.decibel},${d.latitude},${d.longitude}')
+        .map(
+          (d) =>
+              '${d.datetime},${d.decibel},${d.latitude},${d.longitude},${d.altitude},${d.pressure},${d.temperature}',
+        )
         .join('\n');
   }
 
@@ -440,8 +459,9 @@ class _TopScreenState extends State<TopScreen> {
     List<DecibelData> loadedList = [];
     bool hasError = false;
     for (final line in lines) {
+      if (line.trim().isEmpty) continue;
       final parts = line.split(',');
-      if (parts.length != AppConfig.expectedCsvColumns) {
+      if (parts.length < AppConfig.expectedCsvColumns) {
         hasError = true;
         break;
       }
@@ -451,10 +471,14 @@ class _TopScreenState extends State<TopScreen> {
         hasError = true;
         break;
       }
-      // デシベル値, 緯度, 経度: double型
+      // デシベル値, 緯度, 経度, 高度, 気圧, 気温: double型
       final decibel = double.tryParse(parts[1]);
       final latitude = double.tryParse(parts[2]);
       final longitude = double.tryParse(parts[3]);
+      final altitude = parts.length > 4 ? double.tryParse(parts[4]) : 0.0;
+      final pressure = parts.length > 5 ? double.tryParse(parts[5]) : 0.0;
+      final temperature = parts.length > 6 ? double.tryParse(parts[6]) : 0.0;
+
       if (decibel == null || latitude == null || longitude == null) {
         hasError = true;
         break;
@@ -465,6 +489,9 @@ class _TopScreenState extends State<TopScreen> {
           decibel: decibel,
           latitude: latitude,
           longitude: longitude,
+          altitude: altitude ?? 0.0,
+          pressure: pressure ?? 0.0,
+          temperature: temperature ?? 0.0,
         ),
       );
     }
@@ -501,6 +528,7 @@ class _TopScreenState extends State<TopScreen> {
               await _loadSelectedConfig();
               await _loadThreshold();
               await _loadShowGps();
+              await _loadShowApt();
             },
           ),
           IconButton(
@@ -760,6 +788,14 @@ class _TopScreenState extends State<TopScreen> {
                           'GPS: ${d.latitude}, ${d.longitude}',
                           style: const TextStyle(fontSize: 12),
                         ),
+                      if (_showApt &&
+                          (d.altitude != 0.0 ||
+                              d.pressure != 0.0 ||
+                              d.temperature != 0.0))
+                        Text(
+                          'APT: ${d.altitude}m, ${d.pressure}hPa, ${d.temperature}°C',
+                          style: const TextStyle(fontSize: 12),
+                        ),
                     ],
                   ),
                   onTap: () async {
@@ -768,6 +804,13 @@ class _TopScreenState extends State<TopScreen> {
                         'デシベル: ${d.decibel.toStringAsFixed(2)} dB';
                     if (_showGps && (d.latitude != 0.0 || d.longitude != 0.0)) {
                       copyText += '\nGPS: ${d.latitude}, ${d.longitude}';
+                    }
+                    if (_showApt &&
+                        (d.altitude != 0.0 ||
+                            d.pressure != 0.0 ||
+                            d.temperature != 0.0)) {
+                      copyText +=
+                          '\nAPT: ${d.altitude}m, ${d.pressure}hPa, ${d.temperature}°C';
                     }
                     await Clipboard.setData(ClipboardData(text: copyText));
                     if (context.mounted) {

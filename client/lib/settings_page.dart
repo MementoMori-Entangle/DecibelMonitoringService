@@ -28,6 +28,7 @@ class _SettingsPageState extends State<SettingsPage> {
       TextEditingController();
   double _pinClusterRadius = AppConfig.defaultPinClusterRadiusMeter;
   bool _showGps = false;
+  bool _showApt = false;
   @override
   void initState() {
     super.initState();
@@ -67,6 +68,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final interval = await _settings.getAutoWatchIntervalSec();
     final threshold = await _settings.getDecibelThreshold();
     final showGps = await _settings.getShowGps() ?? false;
+    final showApt = await _settings.getShowApt() ?? false;
     final pinClusterRadius = await _settings.getPinClusterRadiusMeter();
     setState(() {
       _configs = configs;
@@ -77,6 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _decibelThreshold = threshold;
       _thresholdController.text = threshold.toString();
       _showGps = showGps;
+      _showApt = showApt;
       _pinClusterRadius = pinClusterRadius;
       _pinClusterRadiusController.text = pinClusterRadius.toString();
       // _obscureAccessTokenListの長さをconfigsに合わせて初期化
@@ -92,6 +95,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await _settings.setAutoWatchIntervalSec(_autoWatchIntervalSec);
     await _settings.setDecibelThreshold(_decibelThreshold);
     await _settings.setShowGps(_showGps);
+    await _settings.setShowApt(_showApt);
     await _settings.setPinClusterRadiusMeter(_pinClusterRadius);
     // 監視タスクの登録/解除を即時反映
     await registerAutoWatchTaskIfNeeded();
@@ -227,6 +231,7 @@ class _SettingsPageState extends State<SettingsPage> {
         'selectedConfigIndex': _selectedIndex,
         'pinClusterRadiusMeter': _pinClusterRadius,
         'showGps': _showGps,
+        'showApt': _showApt,
         'decibelThreshold': _decibelThreshold,
         'autoWatchEnabled': _autoWatchEnabled,
         'autoWatchIntervalSec': _autoWatchIntervalSec,
@@ -299,6 +304,9 @@ class _SettingsPageState extends State<SettingsPage> {
       if (data['showGps'] != null) {
         await _settings.setShowGps(data['showGps'] as bool);
       }
+      if (data['showApt'] != null) {
+        await _settings.setShowApt(data['showApt'] as bool);
+      }
       if (data['decibelThreshold'] != null) {
         await _settings.setDecibelThreshold(
           (data['decibelThreshold'] as num).toDouble(),
@@ -366,6 +374,15 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (v) {
               setState(() {
                 _showGps = v;
+              });
+            },
+          ),
+          SwitchListTile(
+            title: const Text('APT(高度/気圧/気温)データを表示'),
+            value: _showApt,
+            onChanged: (v) {
+              setState(() {
+                _showApt = v;
               });
             },
           ),

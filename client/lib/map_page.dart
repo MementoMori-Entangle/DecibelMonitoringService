@@ -109,7 +109,8 @@ class _MapPageState extends State<MapPage> {
                                         vertical: 2,
                                       ),
                                       child: Text(
-                                        '${d.datetime}\n${d.decibel.toStringAsFixed(2)} dB',
+                                        '${d.datetime}\n${d.decibel.toStringAsFixed(2)} dB'
+                                        '${d.altitude != 0.0 || d.pressure != 0.0 || d.temperature != 0.0 ? '\n${d.altitude}m, ${d.pressure}hPa, ${d.temperature}°C' : ''}',
                                       ),
                                     ),
                                   )

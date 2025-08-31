@@ -14,13 +14,17 @@ message DecibelLogRequest {
   string start_datetime = 2; // yyyyMMdd hh:mi:ss 形式
   string end_datetime = 3;   // yyyyMMdd hh:mi:ss 形式
   bool use_gps = 4; // GPS情報を付加する場合true（デフォルトfalse）
+  bool use_apt = 5; // 高度,気圧,気温情報を付加する場合true（デフォルトfalse）
 }
 
 message DecibelData {
-  string datetime = 1; // yyyyMMdd hh:mi:ss
+  string datetime = 1;  // yyyyMMdd hh:mi:ss
   float decibel = 2;
-  double latitude = 3; // GPSフラグtrue時のみ返却、なければ0
+  double latitude = 3;  // GPSフラグtrue時のみ返却、なければ0
   double longitude = 4; // GPSフラグtrue時のみ返却、なければ0
+  float altitude = 5;   // APTフラグtrue時のみ返却、なければ0
+  float pressure = 6;   // APTフラグtrue時のみ返却、なければ0
+  float temperature = 7;// APTフラグtrue時のみ返却、なければ0
 }
 
 message DecibelLogResponse {
