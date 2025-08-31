@@ -14,6 +14,7 @@ abstract class GrpcClient {
     required String endDatetime,
     Duration? timeout,
     bool useGps = false,
+    bool useApt = false,
   });
 }
 
@@ -37,6 +38,7 @@ class GrpcAndroidClient implements GrpcClient {
     required String endDatetime,
     Duration? timeout,
     bool useGps = false,
+    bool useApt = false,
   }) async {
     final params = {
       'method': 'getDecibelLog',
@@ -47,6 +49,7 @@ class GrpcAndroidClient implements GrpcClient {
       'endDatetime': endDatetime,
       if (timeout != null) 'timeoutMillis': timeout.inMilliseconds,
       'useGps': useGps,
+      'useApt': useApt,
     };
     final result = await _channel.invokeMethod<String>('getDecibelLog', params);
     if (result == null) throw Exception('gRPCネイティブクライアントからnullレスポンス');
@@ -67,6 +70,23 @@ class GrpcAndroidClient implements GrpcClient {
                       (e['longitude'] is num)
                           ? (e['longitude'] as num).toDouble()
                           : double.tryParse(e['longitude']?.toString() ?? '') ??
+                              0.0
+                  ..altitude =
+                      (e['altitude'] is num)
+                          ? (e['altitude'] as num).toDouble()
+                          : double.tryParse(e['altitude']?.toString() ?? '') ??
+                              0.0
+                  ..pressure =
+                      (e['pressure'] is num)
+                          ? (e['pressure'] as num).toDouble()
+                          : double.tryParse(e['pressure']?.toString() ?? '') ??
+                              0.0
+                  ..temperature =
+                      (e['temperature'] is num)
+                          ? (e['temperature'] as num).toDouble()
+                          : double.tryParse(
+                                e['temperature']?.toString() ?? '',
+                              ) ??
                               0.0,
           )
           .toList();

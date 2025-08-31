@@ -4,6 +4,7 @@ import time
 from concurrent import futures
 from datetime import datetime
 from psycopg2 import sql
+from psycopg2.extras import DictCursor
 
 import grpc
 import psycopg2
@@ -11,10 +12,9 @@ import psycopg2
 sys.path.append(os.path.join(os.path.dirname(__file__), '../proto'))
 import decibel_logger_pb2
 import decibel_logger_pb2_grpc
-from gps_log_util import fetch_gps_logs, build_gps_dict
 from config import (ACCESS_LOG_TABLE, AUTH_MODE, DB_HOST, DB_NAME, DB_PASS,
                     DB_PORT, DB_USER, DECIBEL_LOG_TABLE, LOG_IPV4_ONLY, PORT,
-                    SLEEP_TIME)
+                    SLEEP_TIME, GPS_LOG_TABLE, ALTITUDE_LOG_TABLE)
 
 
 # アクセストークンの有効性をDBから判定
@@ -99,7 +99,12 @@ def log_access(ip_addr, access_token, success, reason):
             pass
         print(f"[ACCESS LOGGING ERROR] {e}", flush=True)
 
-def fetch_decibel_logs(start_dt=None, end_dt=None):
+def fetch_decibel_logs(start_dt=None, end_dt=None, options=None):
+    if options is None:
+        options = {}
+    use_gps = options.get('use_gps', False)
+    use_apt = options.get('use_apt', False)
+
     conn = None
     try:
         conn = psycopg2.connect(
@@ -107,26 +112,60 @@ def fetch_decibel_logs(start_dt=None, end_dt=None):
             port=DB_PORT,
             dbname=DB_NAME,
             user=DB_USER,
-            password=DB_PASS
+            password=DB_PASS,
+            cursor_factory=DictCursor
         )
         with conn.cursor() as cur:
-            base_query = sql.SQL("SELECT timestamp, decibel_a FROM {}").format(
-                                                        sql.Identifier(DECIBEL_LOG_TABLE))
+            
+            select_columns = [
+                sql.SQL("a.timestamp"),
+                sql.SQL("a.decibel_a")
+            ]
+            
+            if use_gps:
+                select_columns.extend([
+                    sql.SQL("b.latitude"),
+                    sql.SQL("b.longitude")
+                ])
+            
+            if use_apt:
+                select_columns.extend([
+                    sql.SQL("c.altitude"),
+                    sql.SQL("c.pressure"),
+                    sql.SQL("c.temperature")
+                ])
+
+            query = sql.SQL("SELECT {} FROM {} AS a").format(
+                sql.SQL(', ').join(select_columns),
+                sql.Identifier(DECIBEL_LOG_TABLE)
+            )
+
+            if use_gps:
+                query += sql.SQL(" LEFT JOIN {} AS b ON date_trunc('second', a.timestamp) = date_trunc('second', b.timestamp)").format(sql.Identifier(GPS_LOG_TABLE))
+
+            if use_apt:
+                query += sql.SQL(" LEFT JOIN {} AS c ON date_trunc('second', a.timestamp) = date_trunc('second', c.timestamp)").format(sql.Identifier(ALTITUDE_LOG_TABLE))
+
             where_clauses = []
             params = []
+
             if start_dt:
-                where_clauses.append(sql.SQL("timestamp >= %s"))
+                where_clauses.append(sql.SQL("a.timestamp >= %s"))
                 params.append(start_dt)
             if end_dt:
-                where_clauses.append(sql.SQL("timestamp <= %s"))
+                where_clauses.append(sql.SQL("a.timestamp <= %s"))
                 params.append(end_dt)
+
             if where_clauses:
-                base_query = base_query + sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
-            base_query = base_query + sql.SQL(" ORDER BY timestamp ASC")
-            cur.execute(base_query, params)
+                query += sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
+            
+            query += sql.SQL(" ORDER BY a.timestamp ASC")
+
+            cur.execute(query, params)
             results = cur.fetchall()
-            return results
+            return [dict(row) for row in results]
     except Exception as e:
+        print(f"Error fetching decibel logs: {e}")
         return []
     finally:
         if conn:
@@ -187,21 +226,32 @@ class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
             return decibel_logger_pb2.DecibelLogResponse()
         # 正常アクセスも記録
         log_access(ip_addr, request.access_token, True, 'OK')
-        logs = fetch_decibel_logs(start_dt, end_dt)
+
+        options = {
+            'use_gps': hasattr(request, 'use_gps') and request.use_gps,
+            'use_apt': hasattr(request, 'use_apt') and request.use_apt
+        }
+
+        logs = fetch_decibel_logs(start_dt, end_dt, options=options)
+        
         response = decibel_logger_pb2.DecibelLogResponse()
-        use_gps = hasattr(request, 'use_gps') and request.use_gps
-        if use_gps:
-            gps_logs = fetch_gps_logs(start_dt, end_dt)
-            gps_dict = build_gps_dict(gps_logs)
-            for row in logs:
-                ts = row[0].replace(microsecond=0)
-                lat, lng = gps_dict.get(ts, (0.0, 0.0))
-                dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
-                response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1], latitude=lat, longitude=lng))
-        else:
-            for row in logs:
-                dt_str = row[0].strftime("%Y/%m/%d %H:%M:%S")
-                response.logs.append(decibel_logger_pb2.DecibelData(datetime=dt_str, decibel=row[1]))
+
+        for row in logs:
+            data = {
+                "datetime": row['timestamp'].strftime("%Y/%m/%d %H:%M:%S"),
+                "decibel": row['decibel_a']
+            }
+            if options.get('use_gps'):
+                data["latitude"] = row.get('latitude', 0.0) or 0.0
+                data["longitude"] = row.get('longitude', 0.0) or 0.0
+            
+            if options.get('use_apt'):
+                data["altitude"] = row.get('altitude', 0.0) or 0.0
+                data["pressure"] = row.get('pressure', 0.0) or 0.0
+                data["temperature"] = row.get('temperature', 0.0) or 0.0
+
+            response.logs.append(decibel_logger_pb2.DecibelData(**data))
+
         return response
 
 def serve():

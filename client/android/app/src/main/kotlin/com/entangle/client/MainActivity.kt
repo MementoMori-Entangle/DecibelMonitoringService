@@ -102,12 +102,19 @@ class MainActivity : FlutterFragmentActivity() {
                                 is Int -> u != 0
                                 else -> false
                             }
+                            val useApt = when (val u = params["useApt"]) {
+                                is Boolean -> u
+                                is String -> u.toBooleanStrictOrNull() ?: false
+                                is Int -> u != 0
+                                else -> false
+                            }
                             val req =
                                 DecibelMonitoringServiceOuterClass.DecibelLogRequest.newBuilder()
                                     .setAccessToken(params["accessToken"] as? String ?: "")
                                     .setStartDatetime(params["startDatetime"] as? String ?: "")
                                     .setEndDatetime(params["endDatetime"] as? String ?: "")
                                     .setUseGps(useGps)
+                                    .setUseApt(useApt)
                                     .build()
                             val resp =
                                 withContext(Dispatchers.IO) {
@@ -120,6 +127,9 @@ class MainActivity : FlutterFragmentActivity() {
                                 logObj.put("decibel", log.decibel)
                                 logObj.put("latitude", log.latitude)
                                 logObj.put("longitude", log.longitude)
+                                logObj.put("altitude", log.altitude)
+                                logObj.put("pressure", log.pressure)
+                                logObj.put("temperature", log.temperature)
                                 logsJson.put(logObj)
                             }
                             JSONObject().put("logs", logsJson).toString()
