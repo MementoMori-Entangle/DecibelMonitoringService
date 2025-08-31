@@ -4,6 +4,7 @@ import time
 from concurrent import futures
 from datetime import datetime
 from psycopg2 import sql
+from psycopg2.extras import DictCursor
 
 import grpc
 import psycopg2
@@ -99,16 +100,11 @@ def log_access(ip_addr, access_token, success, reason):
         print(f"[ACCESS LOGGING ERROR] {e}", flush=True)
 
 def fetch_decibel_logs(start_dt=None, end_dt=None, options=None):
-    """
-    Fetch decibel logs with optional data inclusion.
-    :param start_dt: datetime, start of range
-    :param end_dt: datetime, end of range
-    :param options: dict, e.g. {'use_gps': True, 'use_apt': False}
-    """
     if options is None:
         options = {}
     use_gps = options.get('use_gps', False)
     use_apt = options.get('use_apt', False)
+
     conn = None
     try:
         conn = psycopg2.connect(
@@ -116,7 +112,8 @@ def fetch_decibel_logs(start_dt=None, end_dt=None, options=None):
             port=DB_PORT,
             dbname=DB_NAME,
             user=DB_USER,
-            password=DB_PASS
+            password=DB_PASS,
+            cursor_factory=DictCursor
         )
         with conn.cursor() as cur:
             
@@ -166,7 +163,7 @@ def fetch_decibel_logs(start_dt=None, end_dt=None, options=None):
 
             cur.execute(query, params)
             results = cur.fetchall()
-            return results
+            return [dict(row) for row in results]
     except Exception as e:
         print(f"Error fetching decibel logs: {e}")
         return []
@@ -230,28 +227,28 @@ class DecibelLoggerServicer(decibel_logger_pb2_grpc.DecibelLoggerServicer):
         # 正常アクセスも記録
         log_access(ip_addr, request.access_token, True, 'OK')
 
-        use_gps = hasattr(request, 'use_gps') and request.use_gps
-        use_apt = hasattr(request, 'use_apt') and request.use_apt
+        options = {
+            'use_gps': hasattr(request, 'use_gps') and request.use_gps,
+            'use_apt': hasattr(request, 'use_apt') and request.use_apt
+        }
 
-        logs = fetch_decibel_logs(start_dt, end_dt, use_gps, use_apt)
+        logs = fetch_decibel_logs(start_dt, end_dt, options=options)
         
         response = decibel_logger_pb2.DecibelLogResponse()
 
         for row in logs:
             data = {
-                "datetime": row[0].strftime("%Y/%m/%d %H:%M:%S"),
-                "decibel": row[1]
+                "datetime": row['timestamp'].strftime("%Y/%m/%d %H:%M:%S"),
+                "decibel": row['decibel_a']
             }
-            col_index = 2
-            if use_gps:
-                data["latitude"] = row[col_index] if row[col_index] is not None else 0.0
-                data["longitude"] = row[col_index+1] if row[col_index+1] is not None else 0.0
-                col_index += 2
+            if options.get('use_gps'):
+                data["latitude"] = row.get('latitude', 0.0) or 0.0
+                data["longitude"] = row.get('longitude', 0.0) or 0.0
             
-            if use_apt:
-                data["altitude"] = row[col_index] if row[col_index] is not None else 0.0
-                data["pressure"] = row[col_index+1] if row[col_index+1] is not None else 0.0
-                data["temperature"] = row[col_index+2] if row[col_index+2] is not None else 0.0
+            if options.get('use_apt'):
+                data["altitude"] = row.get('altitude', 0.0) or 0.0
+                data["pressure"] = row.get('pressure', 0.0) or 0.0
+                data["temperature"] = row.get('temperature', 0.0) or 0.0
 
             response.logs.append(decibel_logger_pb2.DecibelData(**data))
 
