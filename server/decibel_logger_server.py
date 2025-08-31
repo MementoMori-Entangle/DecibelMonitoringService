@@ -98,7 +98,17 @@ def log_access(ip_addr, access_token, success, reason):
             pass
         print(f"[ACCESS LOGGING ERROR] {e}", flush=True)
 
-def fetch_decibel_logs(start_dt=None, end_dt=None, use_gps=False, use_apt=False):
+def fetch_decibel_logs(start_dt=None, end_dt=None, options=None):
+    """
+    Fetch decibel logs with optional data inclusion.
+    :param start_dt: datetime, start of range
+    :param end_dt: datetime, end of range
+    :param options: dict, e.g. {'use_gps': True, 'use_apt': False}
+    """
+    if options is None:
+        options = {}
+    use_gps = options.get('use_gps', False)
+    use_apt = options.get('use_apt', False)
     conn = None
     try:
         conn = psycopg2.connect(
