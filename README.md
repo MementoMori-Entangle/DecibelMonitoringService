@@ -49,6 +49,11 @@ Android固有のライセンスは手動管理となっています。
 (自動生成はFlutterとの相性問題で見送り)  
 Flutterはflutter_oss_licensesで自動生成しています。
 
+# 高度(関連)データ連動における、外部DBテーブル参照設定 (1.0.1予定)
+高度データはhttps://github.com/MementoMori-Entangle/AltitudeLogger  
+のサービスで登録されたDBデータを使用している関係上、外部DBテーブルを参照する必要があります。  
+PostgreSQLで外部参照できるよう設定が必要です。
+
 # クライアントアプリについて
 server内にあるdecibel_client_app.pyは簡易確認用です。  
 実際のクライアントはclient内のFlutter(Android)アプリです。
